@@ -1,134 +1,131 @@
 import curses  # terminal-based UI package
 import time
+import random
 
-def main(stdscr):  
-    curses.curs_set(0)  # 0 hides the cursor, making the interface cleaner
-    stdscr.keypad(True)  # Enable special keys (like arrow keys) to be recognized
-    
-    # Setup the menu
+
+# Initialize color pairs
+def initialize_colors():
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_GREEN)  # Highlighted option
+    curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)  # Normal option
+    curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)  # Title text
+    curses.init_pair(4, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+    curses.init_pair(5, curses.COLOR_RED, curses.COLOR_BLACK)
+    curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
+    curses.init_pair(7, curses.COLOR_BLUE, curses.COLOR_BLACK)
+    curses.init_pair(8, curses.COLOR_CYAN, curses.COLOR_BLACK)
+
+# Display the title
+def print_title(stdscr):
+    stdscr.clear()
+    ascii_art = [
+        "    ____        __              __       ",
+        "   / __ \\____  / /_  ___  _____/ /_____ _",
+        "  / /_/ / __ \\/ __ \\/ _ \\/ ___/ __/ __ `/",
+        " / _, _/ /_/ / /_/ /  __/ /  / /_/ /_/ / ",
+        "/_/ |_|\\____/_.___/\\___/_/   \\__/\\__,_/  "
+    ]
+    for i, line in enumerate(ascii_art):
+        stdscr.addstr(i, 2, line, curses.color_pair((i % 6) + 3))
+    stdscr.addstr(len(ascii_art), 3, "Welcome to a new world of adventure!", curses.color_pair(3))
+
+# Display the menu
+def print_menu(stdscr, menu, selected_row):
+    for idx, row in enumerate(menu):
+        if idx == selected_row:
+            stdscr.addstr(idx + 8, 0, f"> {row} <", curses.color_pair(1))
+        else:
+            stdscr.addstr(idx + 8, 0, f"  {row}  ", curses.color_pair(2))
+    stdscr.refresh()
+
+# Return to the main menu
+def return_to_menu(stdscr, menu):
+    print_title(stdscr)
+    print_menu(stdscr, menu, 0)
+
+# Horizontal menu with blinking
+def horizontal_menu_with_blink(stdscr, text, options):
+    stdscr.clear()
+    options.append("Exit to Menu")
+    for idx, line in enumerate(text.split("\n")):
+        stdscr.addstr(idx + 2, 2, line, curses.color_pair(3))
+
+    current_option = 0
+
+    while True:
+        option_x = 5
+        for idx, option in enumerate(options):
+            if idx == current_option:
+                stdscr.addstr(10, option_x, f"[{option}]", curses.color_pair(1))
+            else:
+                stdscr.addstr(10, option_x, f" {option} ", curses.color_pair(2))
+            option_x += len(option) + 4
+
+        stdscr.refresh()
+        key = stdscr.getch()
+
+        if key == curses.KEY_LEFT and current_option > 0:
+            current_option -= 1
+        elif key == curses.KEY_RIGHT and current_option < len(options) - 1:
+            current_option += 1
+        elif key == ord("\n"):
+            if options[current_option] == "Exit to Menu":
+                return None
+            return current_option
+        
+# Function to generate a new story
+def generate_story():
+    stories = [
+        "You find yourself in a dark forest. The trees tower above you, their branches like claws in the moonlight.\nWhat will you do?",
+        "You stand at the edge of a vast desert. The sun blazes above you, and the horizon seems endless.\nWhat will you do?",
+        "You wake up in a strange room with no windows and a single locked door. A faint ticking sound fills the air.\nWhat will you do?",
+        "A raging river blocks your path. The current is swift, and you see no bridge in sight.\nWhat will you do?",
+        "You are in a bustling marketplace filled with strange and exotic goods. A merchant offers you a mysterious box.\nWhat will you do?"
+    ]
+    return random.choice(stories)
+
+# Main game loop
+def main_menu(stdscr):
+    curses.curs_set(0)
+    stdscr.keypad(True)
+    initialize_colors()
+
     menu = ["Start Game", "Exit"]
     current_row = 0
-    # Setup color pairs for the menu
-    curses.start_color()  
-    curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_GREEN)  # Define color pair 1: green background, black text
-    curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)  # Define color pair 1: white background, black text
-    
 
-    # Displays the title Card
-    def print_title():
-        stdscr.clear()
-        ascii_art = [
-            "    ____        __              __       ",
-            "   / __ \\____  / /_  ___  _____/ /_____ _",
-            "  / /_/ / __ \\/ __ \\/ _ \\/ ___/ __/ __ `/",
-            " / _, _/ /_/ / /_/ /  __/ /  / /_/ /_/ / ",
-            "/_/ |_|\\____/_.___/\\___/_/   \\__/\\__,_/  "
-        ]
-         # Print each line of ASCII art
-        for i, line in enumerate(ascii_art):
-            stdscr.addstr(i, 2, line, curses.color_pair(2))  # i + 2 gives a little margin from the top
-        stdscr.addstr(len(ascii_art), 3, "Welcome to a new world of adventure!", curses.color_pair(2))
-        
-    # Function to display the menu with the selected option highlighted
-    def print_menu(stdscr, selected_row): 
-     
-        for idx, row in enumerate(menu):
-            # Highlight the selected row using a color pair
-            if idx == selected_row:
-                stdscr.addstr(idx + 8, 0, f"> {row} <", curses.color_pair(1))
-                stdscr.addstr(idx + 8, len(row) + 4, "                 ", curses.color_pair(2))
-            else:
-                stdscr.addstr(idx + 8, 0, row + "                      ", curses.color_pair(2))  # Display other rows normally
-        stdscr.refresh()  # Refresh the screen to show updated content
-    
-    # Function to return to the main menu
-    def return_to_menu():
-        stdscr.clear()
-        print_title()
-        print_menu(stdscr, 0)
+    return_to_menu(stdscr, menu)
 
-    # Function to display a horizontal menu with blinking
-    def horizontal_menu_with_blink(stdscr, text, options):
-        stdscr.clear()
-        options.append("Exit Game")
-        # Display the story text in green
-        for idx, line in enumerate(text.split("\n")):
-            stdscr.addstr(idx + 2, 2, line, curses.color_pair(1))
-
-        current_option = 0
-        blink = True  # Toggle for blinking
-
-        while True:
-            # Render options
-            option_x = 5
-            for idx, option in enumerate(options):
-                if idx == current_option:
-                    # Use blinking attribute
-                    if blink:
-                        stdscr.addstr(10, option_x, f"[{option}]", curses.color_pair(2) | curses.A_BLINK)
-                    else:
-                        stdscr.addstr(10, option_x, f"[{option}]", curses.color_pair(2))
-                else:
-                    stdscr.addstr(10, option_x, option, curses.color_pair(1))
-                option_x += len(option) + 5  # Add spacing between options
-                
-            # Toggle blink state
-            blink = not blink
-            time.sleep(0.3)  # Delay to control blink speed
-
-            stdscr.refresh()
-            key = stdscr.getch()
-
-            if key == curses.KEY_LEFT and current_option > 0:
-                current_option -= 1
-            elif key == curses.KEY_RIGHT and current_option < len(options) - 1:
-                current_option += 1
-            elif key == ord("\n"):  # Enter key
-                if options[current_row] == "Exit Game":
-                    stdscr.refresh()  # Refresh the screen to show the message
-                    stdscr.getch()  # Wait for the user to press a key before continuing
-                    return_to_menu()
-                    break
-                return current_option  # Return the selected option index
-
-            # Toggle blink state
-            blink = not blink
-            time.sleep(0.3)  # Delay to control blink speed
-
-    
-
-    print_title()
-    # Display the initial menu
-    print_menu(stdscr, current_row)
-
-    # Main loop to handle user input and navigation
     while True:
-        key = stdscr.getch()  # Wait for user input (key press)
+        key = stdscr.getch()
 
-        # Navigate up in the menu, ensuring the selection doesn't go out of bounds
         if key == curses.KEY_UP and current_row > 0:
             current_row -= 1
-        # Navigate down in the menu, ensuring the selection doesn't go out of bounds
         elif key == curses.KEY_DOWN and current_row < len(menu) - 1:
             current_row += 1
-        # Handle the Enter key to confirm a selection
-        elif key == ord("\n"):  # ord("\n") detects the Enter key
-            # Display the selected option at the bottom of the menu
-            stdscr.addstr(len(menu) + 4, 2, f"You selected '{menu[current_row]}'", curses.color_pair(1))
-            stdscr.refresh()  # Refresh the screen to show the message
-            stdscr.getch()  # Wait for the user to press a key before continuing
-
-            # If the "Exit" option is selected, break the loop and exit
+        elif key == ord("\n"):
             if menu[current_row] == "Start Game":
-                 # Main flow
-                story_text = "You find yourself in a dark forest. The trees tower above you, their branches like claws in the moonlight.\nWhat will you do?"
-                options = ["Explore", "Run Away"]
-                selected_option = horizontal_menu_with_blink(stdscr, story_text, options)
-            if menu[current_row] == "Exit":
+                while True:
+                    # Generate a new story
+                    story_text = generate_story()
+                    options = ["Option 1", "Option 2"]
+                    selected_option = horizontal_menu_with_blink(stdscr, story_text, options)
+                    
+                    if selected_option is None:  # User selected "Exit to Menu"
+                        return_to_menu(stdscr, menu)
+                        break  # Exit the story round loop
+
+                    # Handle selected_option here (e.g., display result of the choice)
+                    result_text = f"You chose {options[selected_option]}!"
+                    stdscr.clear()
+                    stdscr.addstr(5, 5, result_text, curses.color_pair(3))
+                    stdscr.addstr(7, 5, "Press any key to continue to the next story...", curses.color_pair(2))
+                    stdscr.refresh()
+                    stdscr.getch()  # Wait for user to acknowledge before the next round
+
+            elif menu[current_row] == "Exit":
                 break
 
-        # Update the menu display with the new selected row
-        print_menu(stdscr, current_row)
+        print_menu(stdscr, menu, current_row)
 
-# The curses wrapper ensures proper initialization and cleanup of the terminal
-curses.wrapper(main)
+# Run the program
+curses.wrapper(main_menu)
