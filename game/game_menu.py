@@ -7,12 +7,12 @@ import random
 def initialize_colors():
     curses.start_color()
     curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_GREEN)  # Highlighted option
-    curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)  # Normal option
-    curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)  # Title text
-    curses.init_pair(4, curses.COLOR_YELLOW, curses.COLOR_BLACK)
-    curses.init_pair(5, curses.COLOR_RED, curses.COLOR_BLACK)
+    curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)  # White text
+    curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)  # Green text
+    curses.init_pair(4, curses.COLOR_YELLOW, curses.COLOR_BLACK) 
+    curses.init_pair(5, curses.COLOR_RED, curses.COLOR_BLACK)    
     curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
-    curses.init_pair(7, curses.COLOR_BLUE, curses.COLOR_BLACK)
+    curses.init_pair(7, curses.COLOR_BLUE, curses.COLOR_BLACK)   
     curses.init_pair(8, curses.COLOR_CYAN, curses.COLOR_BLACK)
 
 # Display the title
@@ -31,6 +31,8 @@ def print_title(stdscr):
 
 # Display the menu
 def print_menu(stdscr, menu, selected_row):
+    stdscr.clear()
+    print_title(stdscr)
     for idx, row in enumerate(menu):
         if idx == selected_row:
             stdscr.addstr(idx + 8, 0, f"> {row} <", curses.color_pair(1))
@@ -38,13 +40,8 @@ def print_menu(stdscr, menu, selected_row):
             stdscr.addstr(idx + 8, 0, f"  {row}  ", curses.color_pair(2))
     stdscr.refresh()
 
-# Return to the main menu
-def return_to_menu(stdscr, menu):
-    print_title(stdscr)
-    print_menu(stdscr, menu, 0)
-
-# Horizontal menu with blinking
-def horizontal_menu_with_blink(stdscr, text, options):
+# Horizontal menu
+def horizontal_menu(stdscr, text, options):
     stdscr.clear()
     options.append("Exit to Menu")
     for idx, line in enumerate(text.split("\n")):
@@ -75,25 +72,24 @@ def horizontal_menu_with_blink(stdscr, text, options):
         
 # Function to generate a new story
 def generate_story():
-    stories = [
+    return random.choice([
         "You find yourself in a dark forest. The trees tower above you, their branches like claws in the moonlight.\nWhat will you do?",
         "You stand at the edge of a vast desert. The sun blazes above you, and the horizon seems endless.\nWhat will you do?",
         "You wake up in a strange room with no windows and a single locked door. A faint ticking sound fills the air.\nWhat will you do?",
         "A raging river blocks your path. The current is swift, and you see no bridge in sight.\nWhat will you do?",
         "You are in a bustling marketplace filled with strange and exotic goods. A merchant offers you a mysterious box.\nWhat will you do?"
-    ]
-    return random.choice(stories)
+    ])
 
 # Main game loop
 def main_menu(stdscr):
     curses.curs_set(0)
-    stdscr.keypad(True)
+    stdscr.keypad(True)  # Enable special keys (like arrow keys) to be recognized
     initialize_colors()
 
     menu = ["Start Game", "Exit"]
     current_row = 0
 
-    return_to_menu(stdscr, menu)
+    print_menu(stdscr, menu, current_row) # Inital display of the menu
 
     while True:
         key = stdscr.getch()
@@ -108,10 +104,10 @@ def main_menu(stdscr):
                     # Generate a new story
                     story_text = generate_story()
                     options = ["Option 1", "Option 2"]
-                    selected_option = horizontal_menu_with_blink(stdscr, story_text, options)
+                    selected_option = horizontal_menu(stdscr, story_text, options)
                     
                     if selected_option is None:  # User selected "Exit to Menu"
-                        return_to_menu(stdscr, menu)
+                        print_menu(stdscr, menu, 0)
                         break  # Exit the story round loop
 
                     # Handle selected_option here (e.g., display result of the choice)
@@ -125,7 +121,7 @@ def main_menu(stdscr):
             elif menu[current_row] == "Exit":
                 break
 
-        print_menu(stdscr, menu, current_row)
+        print_menu(stdscr, menu, current_row)  # Update the menu display with the new selected row
 
 # Run the program
 curses.wrapper(main_menu)
