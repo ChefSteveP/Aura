@@ -2,40 +2,48 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torchvision.transforms as transforms
-import torchvision.datasets as datasets
 from transformers import AutoModelForCausalLM
 
 # Reference: https://pytorch.org/tutorials/beginner/knowledge_distillation_tutorial.html
 
 class ModelDistiller:
     
-    def __init__(self, model_name, device="cpu"):
+    def __init__(self, teacher, student, device="cpu"):
         """
-        Initialize the ModelDistiller with a pretrained model and other state variables.
-        """
-        self.model_name = model_name
-        self.device = device
-        self.model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
-
-    def train_knowledge_distillation(teacher, student, train_loader, epochs, learning_rate, T, soft_target_loss_weight, ce_loss_weight, device):
-        """
-        Train a student model using knowledge distillation from a teacher model.
+        Initialize the ModelDistiller with teacher and student models.
 
         Args:
-            teacher (nn.Module): The teacher model to distill from.
-            student (nn.Module): The student model to train.
-            train_loader (DataLoader): The training data loader.
-            epochs (int): The number of epochs to train for.
-            learning_rate (float): The learning rate for the optimizer.
-            T (float): The temperature for the knowledge distillation.
-            soft_target_loss_weight (float): The weight for the soft targets loss.
-            ce_loss_weight (float): The weight for the cross-entropy loss.
-            device (torch.device): The device to run the training on.
-
-        Returns:
-            None
+            teacher (nn.Module): Pretrained teacher model.
+            student (nn.Module): Student model to be trained.
+            device (str): Device to use for computation (e.g., 'cpu' or 'cuda').
         """
+        if not teacher or not student:
+            raise ValueError("Both teacher and student models must be provided.")
+        
+        self.device = device
+        self.teacher_model = teacher.to(device)
+        self.student_model = student.to(device)
+        
+    def train_knowledge_distillation(self, train_loader, epochs, 
+                                     learning_rate, T, soft_target_loss_weight, 
+                                     ce_loss_weight, teacher=None, student=None):
+        """
+        Trains the student model using knowledge distillation from the teacher model.
+
+        Args:
+            train_loader (DataLoader): Training data loader.
+            epochs (int): Number of training epochs.
+            learning_rate (float): Learning rate for the optimizer.
+            T (float): Temperature for soft target scaling.
+            soft_target_loss_weight (float): Weight for the soft target loss.
+            ce_loss_weight (float): Weight for the cross-entropy loss.
+            teacher (nn.Module, optional): Teacher model (defaults to self.teacher_model).
+            student (nn.Module, optional): Student model (defaults to self.student_model).
+        """
+    
+        teacher = teacher or self.teacher_model
+        student = student or self.student_model
+        
         ce_loss = nn.CrossEntropyLoss()
         optimizer = optim.Adam(student.parameters(), lr=learning_rate)
 
@@ -45,7 +53,7 @@ class ModelDistiller:
         for epoch in range(epochs):
             running_loss = 0.0
             for inputs, labels in train_loader:
-                inputs, labels = inputs.to(device), labels.to(device)
+                inputs, labels = inputs.to(self.device), labels.to(self.device)
 
                 optimizer.zero_grad()
 
@@ -61,7 +69,7 @@ class ModelDistiller:
                 soft_prob = nn.functional.log_softmax(student_logits / T, dim=-1)
 
                 # Calculate the soft targets loss. Scaled by T**2 as suggested by the authors of the paper "Distilling the knowledge in a neural network"
-                soft_targets_loss = torch.sum(soft_targets * (soft_targets.log() - soft_prob)) / soft_prob.size()[0] * (T**2)
+                soft_targets_loss = (soft_targets * (soft_targets.log() - soft_prob)).sum(dim=-1).mean() * (T**2)
 
                 # Calculate the true label loss
                 label_loss = ce_loss(student_logits, labels)
@@ -76,9 +84,23 @@ class ModelDistiller:
 
             print(f"Epoch {epoch+1}/{epochs}, Loss: {running_loss / len(train_loader)}")
 
-    def save_model(self):
-        self.model.save_pretrained("./llama_literature_distilled")
-        print("Knowledge distillation complete. Distilled model saved to './llama_literature_pruned'.")
+    def save_model(self, save_path="./pruned_model"):
+        """
+        Saves the distilled student model to a directory specified by `save_path`
+
+        Args:
+            save_path (str): The directory where the model will be saved. Defaults to "./pruned_model"
+        """
+        self.student_model.save_pretrained(save_path)
+        print(f"Distilled model saved to '{save_path}'.")
 
 
 ############Instruction for use################################################
+# In your main script, create an instance of ModelDistiller
+# model_distiller = ModelDistiller(teacher_model, student_model, device)
+
+# Train the distilled model
+# model_distiller.train_knowledge_distillation(train_loader, epochs, learning_rate, T, soft_target_loss_weight, ce_loss_weight)
+
+# Save the distilled model
+# model_distiller.save_model(save_path)
