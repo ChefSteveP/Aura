@@ -91,8 +91,12 @@ class ModelDistiller:
         Args:
             save_path (str): The directory where the model will be saved. Defaults to "./pruned_model"
         """
-        self.student_model.save_pretrained(save_path)
-        print(f"Distilled model saved to '{save_path}'.")
+        if hasattr(self.student_model, "save_pretrained"):
+            self.student_model.save_pretrained(save_path)
+            print(f"Distilled model (Hugging Face) saved to '{save_path}'.")
+        else:
+            torch.save(self.student_model.state_dict(), f"{save_path}.pth")
+            print(f"Distilled model (PyTorch) saved to '{save_path}.pth'.")
 
 
 ############Instruction for use################################################
