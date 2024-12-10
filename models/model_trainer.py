@@ -4,6 +4,7 @@ from transformers import AutoTokenizer
 from datasets import load_from_disk
 import os
 import torch
+from model_quantizer import ModelQuantizer
 
 
 class ModelTrainer:
@@ -98,6 +99,44 @@ class ModelTrainer:
         )
 
         print("Starting training on device:", self.device)
+        trainer.train()
+        print("Training complete. Saving model...")
+        trainer.save_model(self.model_results_path)
+        print(f"Model saved to {self.model_results_path}")
+
+        wandb.finish()
+
+    def qat(self):
+        # load and train/test split data
+        dataset = self.load_data_from_path()
+        dataset = dataset.train_test_split(test_size=0.2)
+        # prepare QAT
+        model_quantizer = ModelQuantizer()
+        model_quantizer.prepare_qat()
+
+        training_args = TrainingArguments(
+            output_dir=self.model_results_path,
+            evaluation_strategy="epoch",
+            logging_strategy="steps",
+            logging_steps=10,
+            learning_rate=self.learning_rate,
+            per_device_train_batch_size=self.batch_size,
+            num_train_epochs=self.epochs,
+            weight_decay=0.01,
+            report_to="wandb",
+            logging_dir=f"{self.model_results_path}/logs",
+            save_total_limit=2,
+            fp16=self.fp16,
+        )
+
+        trainer = Trainer(
+            model=self.model,
+            args=training_args,
+            train_dataset=dataset["train"],
+            eval_dataset=dataset["test"],
+        )
+
+        print("Starting training with QAT on device:", self.device)
         trainer.train()
         print("Training complete. Saving model...")
         trainer.save_model(self.model_results_path)

@@ -55,10 +55,14 @@ def main():
     # model_pruner.prune_model(amount=0.3)
     # model_pruner.save_model()
 
-    # # Step 4: Model Quantization
-    # model_quantizer = ModelQuantizer()
+    # Step 4: Model Quantization
+    #PTQ
+    model_quantizer = ModelQuantizer()
+    model_quantizer.ptq()
     # model_quantizer.quantize_model()
-    # model_quantizer.save_model()
+    model_quantizer.save_model()
+    # #QAT
+    # model_trainer.qat()
 
     # # Step 5: Model Evaluation
     # model_evaluator = ModelEvaluator()
