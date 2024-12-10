@@ -87,4 +87,7 @@ echo -e "\n\n===== Configuring Git user details for this repository =====\n\n"
 git config --local user.email "$email"
 git config --local user.name "$username"
 
-ssh -T git@github.com-$username
+# Final authentication
+git_url="git@github.com-$username"
+ssh -T $git_url
+git remote set-url origin $git_url:$repo
