@@ -61,6 +61,7 @@ echo -e "\n\n===== Cloning the specified GitHub repository =====\n\n"
 default_repo="git@github.com:ChefSteveP/Aura.git"
 read -p "Enter the GitHub repository URL to clone (default: $default_repo): " repo
 repo=${repo:-$default_repo}
+repo_path=$(echo "$repo" | sed 's/git@github.com://')
 repo_name=$(basename "$repo" .git)
 
 # Check if the directory for the user exists; create it if it doesn't
@@ -90,4 +91,4 @@ git config --local user.name "$username"
 # Final authentication
 git_url="git@github.com-$username"
 ssh -T $git_url
-git remote set-url origin $git_url:$repo
+git remote set-url origin "$git_url:$repo_path"
