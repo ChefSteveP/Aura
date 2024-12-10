@@ -1,5 +1,7 @@
 # Aura
-A RAG pipeline for NPC interactions for game development.
+A model evaluation pipeline for llama models. 
+
+In this repo we test the effects of post training quatization on model performance. We then evaluate knowledge distillation and Quantization Aware Training to recover lost quality.
 
 # Setup
 - See `scripts/setup_scripts/setup_readme.md` to setup your machine on a Linux VM
