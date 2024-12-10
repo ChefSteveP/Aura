@@ -15,7 +15,7 @@ The process is divided into three stages, with each script automating a portion 
 ### 0. Initialize all bash scripts
 
 ```bash
-chmod +x setup_scripts/1_install_cuda.sh && chmod +x setup_scripts/2_setup_github.sh && chmod +x setup_scripts/3_validate_cuda.sh && chmod +x setup_scripts/4_install_pyenv.sh && chmod +x setup_scripts/5_set_pyenv_env.sh
+chmod +x setup_scripts/1_install_cuda.sh && chmod +x setup_scripts/2_setup_github.sh && chmod +x setup_scripts/3_validate_cuda.sh && chmod +x setup_scripts/4_install_pyenv.sh && chmod +x setup_scripts/5_set_pyenv.sh
 ```
 
 ### 1. **Script: 1_install_cuda.sh**
@@ -30,7 +30,7 @@ This script performs the following tasks:
 - Adds the necessary CUDA paths to `.bashrc`.
 
 **Steps to run:**
-`setup_scripts/vm_setup_1.sh`
+`setup_scripts/1_install_cuda.sh`
 The script will reboot the system after completion. Once the system reboots, proceed to the next step by running the second script.
 
 ---

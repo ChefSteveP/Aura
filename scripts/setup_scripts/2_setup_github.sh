@@ -5,9 +5,42 @@ echo -e "\n"
 read -p "Enter your GitHub email: " email
 read -p "Enter your GitHub username: " username
 key_file="$HOME/.ssh/id_ed25519_${username}"
+ssh_config="$HOME/.ssh/config"
 
-echo -e "\n\n===== Generating SSH key for GitHub =====\n\n"
-ssh-keygen -t ed25519 -C "$email" -f "$key_file"
+# Check if the .ssh file exists
+if [[ ! -f $key_file ]]; then
+    echo -e "\n\n===== Generating SSH key for GitHub =====\n\n"
+    ssh-keygen -t ed25519 -C "$email" -f "$key_file"
+else
+    echo -e "\n===== $key_file already exists. Skipping creation =====\n"
+fi
+
+# Ensure the .ssh directory exists
+if [[ ! -d "$HOME/.ssh" ]]; then
+    mkdir -p "$HOME/.ssh"
+    chmod 700 "$HOME/.ssh"
+else
+    echo -e "\n===== $HOME/.ssh already exists. Skipping creation =====\n"
+fi
+
+# Ensure the config file exists
+if [[ ! -f "$ssh_config" ]]; then
+    echo -e "\n===== Creating SSH config file =====\n"
+    touch "$ssh_config"
+    chmod 600 "$ssh_config"
+else
+    echo -e "\n===== $ssh_config already exists. Skipping creation =====\n"
+fi
+
+# Add GitHub configuration to the SSH config file
+if ! grep -q "Host github.com-$username" "$ssh_config"; then
+    echo -e "\nHost github.com-$username" >> "$ssh_config"
+    echo -e "  HostName github.com" >> "$ssh_config"
+    echo -e "  User git" >> "$ssh_config"
+    echo -e "  IdentityFile $key_file" >> "$ssh_config"
+    echo -e "  IdentitiesOnly yes\n" >> "$ssh_config"
+    chmod 600 "$ssh_config"
+fi
 
 # Start the SSH agent
 echo -e "\n\n===== Starting SSH agent =====\n\n"
@@ -16,14 +49,6 @@ eval "$(ssh-agent -s)"
 # Add SSH private key to the agent
 echo -e "\n\n===== Adding SSH key to SSH agent =====\n\n"
 ssh-add "$key_file"
-
-# Configure SSH for GitHub
-echo -e "\n\n===== Configuring SSH for GitHub =====\n\n"
-ssh_config="$HOME/.ssh/config"
-if ! grep -q "Host github.com" "$ssh_config"; then
-    echo -e "\nHost github.com\n  HostName github.com\n  User git\n  IdentityFile $key_file\n" >> "$ssh_config"
-    chmod 600 "$ssh_config"
-fi
 
 # Display the SSH public key
 echo -e "\n\n===== Please add the SSH public key to your GitHub account before proceeding =====\n\n"
@@ -37,11 +62,29 @@ default_repo="git@github.com:ChefSteveP/Aura.git"
 read -p "Enter the GitHub repository URL to clone (default: $default_repo): " repo
 repo=${repo:-$default_repo}
 repo_name=$(basename "$repo" .git)
-mkdir $username
+
+# Check if the directory for the user exists; create it if it doesn't
+if [[ ! -d "$username" ]]; then
+    echo -e "\n===== Creating directory for user $username =====\n"
+    mkdir "$username"
+else
+    echo -e "\n===== Directory $username already exists. Skipping creation. =====\n"
+fi
+
+# Check if the repo exists in <username>/<repo_name>; create it if it doesn't
 cd "$username" || exit
-git clone "$repo"
+if [[ ! -d "$repo_name" ]]; then
+    echo -e "\n===== Cloning $repo =====\n"
+    git clone "$repo"
+else
+    echo -e "\n===== $repo_name already exists. Skipping creation. =====\n"
+fi
+
+cd "$repo_name" || exit
 
 # Configure Git for this repository
 echo -e "\n\n===== Configuring Git user details for this repository =====\n\n"
 git config --local user.email "$email"
 git config --local user.name "$username"
+
+ssh -T git@github.com-$username

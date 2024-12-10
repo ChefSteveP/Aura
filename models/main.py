@@ -12,7 +12,7 @@ def main():
     huggingface_token = "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"
 
     # data prep vars
-    saved_data_path = "data/project_gutenberg"
+    saved_data_path = "~/storage/data/project_gutenberg"
     download_path = "manu/project_gutenberg"
     split = "en"
     tokenized_field_name = "text"
