@@ -8,6 +8,10 @@ sudo apt update && sudo apt upgrade -y
 echo -e "\n\n===== Installing gcc and printing the version =====\n\n"
 sudo apt install -y gcc
 
+# Install Git
+echo -e "\n\n===== Installing Git =====\n\n"
+sudo apt install git -y
+
 echo -e "\n\n===== Checking gcc install version =====\n\n"
 gcc --version
 echo -e "\n"
@@ -48,5 +52,5 @@ echo 'export PATH=/usr/local/cuda-12.6/bin${PATH:+:${PATH}}' >> ~/.bashrc
 echo 'export LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}' >> ~/.bashrc
 
 
-echo -e "\n\n===== NVIDIA driver installed. Rebooting system. Then run vm_setup_2.sh =====\n\n"
+echo -e "\n\n===== NVIDIA driver installed. Rebooting system. Then run 2_setup_github.sh =====\n\n"
 sudo reboot
