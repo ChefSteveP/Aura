@@ -8,7 +8,7 @@ from transformers import AutoModelForCausalLM
 
 class ModelDistiller:
     
-    def __init__(self, teacher, student, device="cpu"):
+    def __init__(self, teacher, student):
         """
         Initialize the ModelDistiller with teacher and student models.
 
@@ -20,7 +20,7 @@ class ModelDistiller:
         if not teacher or not student:
             raise ValueError("Both teacher and student models must be provided.")
         
-        self.device = device
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.teacher_model = teacher.to(device)
         self.student_model = student.to(device)
         
@@ -84,7 +84,7 @@ class ModelDistiller:
 
             print(f"Epoch {epoch+1}/{epochs}, Loss: {running_loss / len(train_loader)}")
 
-    def save_model(self, save_path="./pruned_model"):
+    def save_model(self, save_path="./distilled_model"):
         """
         Saves the distilled student model to a directory specified by `save_path`
 
@@ -101,7 +101,7 @@ class ModelDistiller:
 
 ############Instruction for use################################################
 # In your main script, create an instance of ModelDistiller
-# model_distiller = ModelDistiller(teacher_model, student_model, device)
+# model_distiller = ModelDistiller(teacher_model, student_model)
 
 # Train the distilled model
 # model_distiller.train_knowledge_distillation(train_loader, epochs, learning_rate, T, soft_target_loss_weight, ce_loss_weight)

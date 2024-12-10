@@ -48,23 +48,26 @@ def main():
         learning_rate=learning_rate,
         wandb_project=wandb_project,
     )
+    
+    #Step 1: Finetune model
     model_trainer.train_model()
 
-    # # Step 3: Model Pruning
-    # model_pruner = ModelPruner()
-    # model_pruner.prune_model(amount=0.3)
-    # model_pruner.save_model()
-
-    # Step 4: Model Quantization
+    # Step 2: Model Quantization (Destruction)
     #PTQ
     model_quantizer = ModelQuantizer()
     model_quantizer.ptq()
     # model_quantizer.quantize_model()
     model_quantizer.save_model()
-    # #QAT
+    
+    #Step 3.1 QAT (Recovery mthd. 1)
     # model_trainer.qat()
+    
+    #Step 3.2 Knowledge Distialation (Recovery mthd. 2)
+    # model_distiller = ModelDistiller(teacher_model, model_quantizer)
+    # model_distiller.train_knowledge_distillation(train_loader, epochs, learning_rate, T, soft_target_loss_weight, ce_loss_weight)
+    # model_distiller.save_model() # optionally provide save_path
 
-    # # Step 5: Model Evaluation
+    # # Step 4: Model Evaluation
     # model_evaluator = ModelEvaluator()
     # model_evaluator.evaluate()
 
