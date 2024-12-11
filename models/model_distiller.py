@@ -21,8 +21,8 @@ class ModelDistiller:
             raise ValueError("Both teacher and student models must be provided.")
         
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.teacher_model = teacher.to(device)
-        self.student_model = student.to(device)
+        self.teacher_model = teacher.to(self.device)
+        self.student_model = student.to(self.device)
         
     def train_knowledge_distillation(self, train_loader, epochs, 
                                      learning_rate, T, soft_target_loss_weight, 
@@ -84,12 +84,12 @@ class ModelDistiller:
 
             print(f"Epoch {epoch+1}/{epochs}, Loss: {running_loss / len(train_loader)}")
 
-    def save_model(self, save_path="./distilled_model"):
+    def save_model(self, save_path="./results/distilled_model"):
         """
         Saves the distilled student model to a directory specified by `save_path`
 
         Args:
-            save_path (str): The directory where the model will be saved. Defaults to "./pruned_model"
+            save_path (str): The directory where the model will be saved. Defaults to "./results/distilled_model"
         """
         if hasattr(self.student_model, "save_pretrained"):
             self.student_model.save_pretrained(save_path)

@@ -55,7 +55,7 @@ def test_model_distiller():
     )
 
     # Save the student model
-    distiller.save_model("./distilled_student_model")
+    distiller.save_model()
 
     print("Testing complete. Distilled student model saved.")
 

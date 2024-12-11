@@ -15,5 +15,5 @@ class ModelPruner:
                 prune.remove(module, "weight")
 
     def save_model(self):
-        self.model.save_pretrained("./llama_literature_pruned")
-        print("Model pruning complete. Pruned model saved to './llama_literature_pruned'.")
+        self.model.save_pretrained("./resuts/llama_literature_pruned")
+        print("Model pruning complete. Pruned model saved to './resuts/llama_literature_pruned")
