@@ -1,7 +1,3 @@
-# Install pyenv dependencies
-echo -e "\n\n===== Installing pyenv dependencies =====\n\n"
-sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
-
 # Install pyenv
 echo -e "\n\n===== Installing pyenv =====\n\n"
 curl https://pyenv.run | bash

@@ -1,4 +1,7 @@
-# main.py
+import logging
+import torch
+import os
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from data_preparation import DataPreparation
 from model_trainer import ModelTrainer
 from model_pruner import ModelPruner
@@ -7,22 +10,14 @@ from model_evaluator import ModelEvaluator
 
 
 def main():
-    # General variables
-    model_name = "meta-llama/Llama-3.2-1B"
-    huggingface_token = "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"
+    logging.basicConfig(level=logging.INFO, format="\n%(levelname)s - %(message)s")
 
-    # Data preparation variables
+    # General variables
+    huggingface_token = os.getenv("HUGGINGFACE_TOKEN")
+    model_name = "meta-llama/Llama-3.2-1B"
     download_path = "manu/project_gutenberg"
     split = "en"
     tokenized_field_name = "text"
-
-    # Training variables
-    model_results_path = "results/llama_3-2_1B"
-    num_labels = 2
-    epochs = 3
-    batch_size = 8
-    learning_rate = 2e-5
-    wandb_project = "aura-ai"
 
     # Prepare data
     data_preparation = DataPreparation(
@@ -32,41 +27,16 @@ def main():
         split=split,
         tokenized_field_name=tokenized_field_name,
     )
-    dataset = data_preparation.prepare_data()
+    dataset = data_preparation.get_dataset()
 
     # Additional pipeline steps can be added here
-    print("Data preparation complete.")
+    logging.info("Data preparation complete.")
 
-    # # train model
-    # model_trainer = ModelTrainer(
-    #     model_name=model_name,
-    #     saved_data_path=saved_data_path,
-    #     model_results_path=model_results_path,
-    #     num_labels=num_labels,
-    #     epochs=epochs,
-    #     batch_size=batch_size,
-    #     learning_rate=learning_rate,
-    #     wandb_project=wandb_project,
-    # )
-    # model_trainer.train_model()
-
-    # # Step 3: Model Pruning
-    # model_pruner = ModelPruner()
-    # model_pruner.prune_model(amount=0.3)
-    # model_pruner.save_model()
-
-    # Step 4: Model Quantization
-    # #PTQ
-    # model_quantizer = ModelQuantizer()
-    # model_quantizer.ptq()
-    # # model_quantizer.quantize_model()
-    # model_quantizer.save_model()
-    # #QAT
-    # model_trainer.qat()
-
-    # # Step 5: Model Evaluation
-    # model_evaluator = ModelEvaluator()
-    # model_evaluator.evaluate()
+    # Evaluate model
+    model = AutoModelForCausalLM.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model_evaluator = ModelEvaluator(model=model, tokenizer=tokenizer)
+    results = model_evaluator.evaluate()
 
 
 if __name__ == "__main__":
