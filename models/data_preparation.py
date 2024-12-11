@@ -14,7 +14,7 @@ class DataPreparation:
         download_path=None,
         split=None,
         tokenized_field_name=None,
-        cache_dir="~/.cache/data",
+        cache_dir="~/.cache/models/data",
     ):
         self.huggingface_token = huggingface_token
         self.download_path = download_path
