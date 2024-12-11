@@ -1,5 +1,7 @@
 # main.py
 import argparse
+import os
+import torch
 from data_preparation import DataPreparation
 from model_trainer import ModelTrainer
 from model_quantizer import ModelQuantizer
@@ -60,13 +62,21 @@ def main():
             learning_rate=learning_rate,
             wandb_project=wandb_project,
         )
-        model_trainer.train_model()
+        # Check if model is already trained
+        if os.path.exists(model_results_path):
+            ##### NEED DONE model_trainer.load_model() Idk how wandb works
+            pass
+        else:
+            model_trainer.train_model()
 
     if args.ptq or args.distill:
         # Step 2: Model Quantization (Destruction) #PTQ
         model_quantizer = ModelQuantizer()
-        model_quantizer.ptq()
-        model_quantizer.save_model()
+        if os.path.exists("./results/llama_literature_quantized"):
+            model_quantizer.model.load_state_dict(torch.load("./results/llama_literature_quantized"))
+        else:  
+            model_quantizer.ptq()
+            model_quantizer.save_model()
     
     if args.qat:
         #Step 3.1 QAT (Recovery mthd. 1)
@@ -80,9 +90,21 @@ def main():
             learning_rate=learning_rate,
             wandb_project=wandb_project,
         )
-        model_trainer.qat()
+        if os.path.exists(model_results_path):
+            ##### NEED DONE model_trainer.load_model() Idk how wandb works
+            pass
+        else:
+            model_trainer.qat()
+        
     
     if args.distill:
+        
+        if os.path.exists("./results/llama_literature_quantized"):
+            model_quantizer.model.load_state_dict(torch.load("./results/llama_literature_quantized"))
+        else:  
+            model_quantizer.ptq()
+            model_quantizer.save_model()
+        
         # Step 3.2 Knowledge Distialation (Recovery mthd. 2)
         teacher_model = None # placeholder
         model_distiller = ModelDistiller(teacher_model, model_quantizer)
