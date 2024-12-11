@@ -5,8 +5,8 @@ echo -e "\n\n===== Updating and upgrading the system =====\n\n"
 sudo apt update && sudo apt upgrade -y
 
 # Validate that gcc is installed
-echo -e "\n\n===== Installing gcc and printing the version =====\n\n"
-sudo apt install -y gcc
+echo -e "\n\n===== Installing dependencies =====\n\n"
+sudo apt install -y gcc tmux git nvidia-open make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev cloud-guest-utils
 
 echo -e "\n\n===== Checking gcc install version =====\n\n"
 gcc --version
@@ -39,14 +39,11 @@ sudo dpkg -i cuda-keyring_1.1-1_all.deb
 sudo apt update
 sudo apt -y install cuda-toolkit-12-6
 
-echo -e "\n\n===== Installing NVIDIA Drivers =====\n\n"
-sudo apt install -y nvidia-open
-
 # Set path for CUDA
 echo -e "\n\n===== Add CUDA to PATH in .bashrc =====\n\n"
 echo 'export PATH=/usr/local/cuda-12.6/bin${PATH:+:${PATH}}' >> ~/.bashrc
 echo 'export LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}' >> ~/.bashrc
 
 
-echo -e "\n\n===== NVIDIA driver installed. Rebooting system. Then run vm_setup_2.sh =====\n\n"
+echo -e "\n\n===== NVIDIA driver installed. Rebooting system. Then run 2_setup_github.sh =====\n\n"
 sudo reboot
