@@ -13,7 +13,7 @@ from plot_metrics import PlotMetrics
 
 
 def run_evaluator():
-
+    pass
 def main():
     # Logging
     logging.basicConfig(level=logging.INFO, format="\n%(levelname)s - %(message)s")
@@ -103,6 +103,26 @@ def main():
 
     if args.distill:
 
+        # Load Teacher Model (Llama 3B)
+        llama_3b_name = "meta-llama/Llama-3.2-3B"
+        try:
+            teacher_model = AutoModelForCausalLM.from_pretrained(llama_3b_name)
+            teacher_tokenizer = AutoTokenizer.from_pretrained(llama_3b_name)
+            logging.info(f"Loaded teacher model: {llama_3b_name}")
+        except Exception as e:
+            logging.error(f"Error loading teacher model: {e}")
+            exit(1)
+        
+        # Load Student Model (LLaMA 1B)
+        llama_1b_name = "meta-llama/Llama-3.2-1B"
+        try:
+            student_model = AutoModelForCausalLM.from_pretrained(llama_1b_name)
+            student_tokenizer = AutoTokenizer.from_pretrained(llama_1b_name)
+            logging.info(f"Loaded student model: {llama_1b_name}")
+        except Exception as e:
+            logging.error(f"Failed to load student model: {llama_1b_name}. Error: {e}")
+            exit(1)
+            
         if os.path.exists("./results/llama_literature_quantized"):
             model_quantizer.model.load_state_dict(
                 torch.load("./results/llama_literature_quantized")
@@ -112,8 +132,7 @@ def main():
             model_quantizer.save_model()
 
         # Step 3.2 Knowledge Distialation (Recovery mthd. 2)
-        teacher_model = None  # placeholder
-        model_distiller = ModelDistiller(teacher_model, model_quantizer)
+        model_distiller = ModelDistiller(teacher=teacher_model, student=model_quantizer)
         train_loader = None  # placeholder
         T = 1.0  # placeholder
         soft_target_loss_weight = 0.5  # placeholder
