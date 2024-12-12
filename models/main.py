@@ -10,6 +10,7 @@ from model_quantizer import ModelQuantizer
 from model_distiller import ModelDistiller
 from model_evaluator import ModelEvaluator
 from plot_metrics import PlotMetrics
+from torch.utils.data import DataLoader
 
 
 def run_evaluator():
@@ -37,23 +38,23 @@ def main():
     saved_data_path = "data/project_gutenberg"
     model_results_path = "results/llama_3-2_1B"
 
+    # if data not cached: download, tokenize, and save data locally
+    # else, load from cache
+    data_preparation = DataPreparation(
+        model_name=model_name,
+        huggingface_token=huggingface_token,
+        download_path="manu/project_gutenberg",
+        split="en",
+        tokenized_field_name="text",
+    )
+    dataset = data_preparation.get_dataset()
+    
     if args.train:
         num_labels = 2
         epochs = 3
         batch_size = 8
         learning_rate = 2e-5
         wandb_project = "aura-ai"
-
-        # if data not cached: download, tokenize, and save data locally
-        # else, load from cache
-        data_preparation = DataPreparation(
-            model_name=model_name,
-            huggingface_token=huggingface_token,
-            download_path="manu/project_gutenberg",
-            split="en",
-            tokenized_field_name="text",
-        )
-        dataset = data_preparation.prepare_data()
 
         model_trainer = ModelTrainer(
             model_name=model_name,
@@ -72,7 +73,7 @@ def main():
         else:
             model_trainer.train_model()
 
-    if args.ptq or args.distill:
+    if args.ptq:
         # Step 2: Model Quantization (Destruction) #PTQ
         model_quantizer = ModelQuantizer()
         if os.path.exists("./results/llama_literature_quantized"):
@@ -102,7 +103,19 @@ def main():
             model_trainer.qat()
 
     if args.distill:
-
+        # Step 3.2 Knowledge Distialation (Recovery mthd. 2)
+        
+        # hyper parameters
+        epochs = 1
+        batch_size = 8
+        learning_rate = 2e-5
+        T = 1.0  # placeholder
+        soft_target_loss_weight = 0.5  # placeholder
+        ce_loss_weight = 0.5  # placeholder
+        
+        train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        logging.info("Initialized data loader")
+        
         # Load Teacher Model (Llama 3B)
         llama_3b_name = "meta-llama/Llama-3.2-3B"
         try:
@@ -114,6 +127,7 @@ def main():
             exit(1)
         
         # Load Student Model (LLaMA 1B)
+        # This will be swapped out with the ptq quantized model later
         llama_1b_name = "meta-llama/Llama-3.2-1B"
         try:
             student_model = AutoModelForCausalLM.from_pretrained(llama_1b_name)
@@ -123,24 +137,33 @@ def main():
             logging.error(f"Failed to load student model: {llama_1b_name}. Error: {e}")
             exit(1)
             
-        if os.path.exists("./results/llama_literature_quantized"):
-            model_quantizer.model.load_state_dict(
-                torch.load("./results/llama_literature_quantized")
-            )
-        else:
-            model_quantizer.ptq()
-            model_quantizer.save_model()
+        # if os.path.exists("./results/llama_literature_quantized"):
+        #     model_quantizer.model.load_state_dict(
+        #         torch.load("./results/llama_literature_quantized")
+        #     )
+        # else:
+        #     model_quantizer.ptq()
+        #     model_quantizer.save_model()
 
-        # Step 3.2 Knowledge Distialation (Recovery mthd. 2)
         model_distiller = ModelDistiller(teacher=teacher_model, student=model_quantizer)
-        train_loader = None  # placeholder
-        T = 1.0  # placeholder
-        soft_target_loss_weight = 0.5  # placeholder
-        ce_loss_weight = 0.5  # placeholder
-        model_distiller.train_knowledge_distillation(
-            train_loader, epochs, learning_rate, T, soft_target_loss_weight, ce_loss_weight
-        )
-        model_distiller.save_model()  # optionally provide save_path
+        
+        logging.info("Initialized model distiller")
+        logging.info("Starting knowledge distillation training...")
+        
+        try:
+            model_distiller.train_knowledge_distillation(
+                train_loader, epochs, learning_rate, T, soft_target_loss_weight, ce_loss_weight
+            )
+            logging.info("Knowledge distillation training completed.")
+        except Exception as e:
+            logging.error(f"Failed to train knowledge distillation: {e}")
+            exit(1)
+            
+        try:
+            model_distiller.save_model()  # optionally provide save_path
+        except Exception as e:
+            logging.error(f"Failed to save distilled model: {e}")
+            exit(1)
 
     if args.evaluate:
         ModelEvaluator().clear_data_files(None, None, None)
