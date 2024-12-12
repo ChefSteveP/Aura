@@ -6,11 +6,9 @@ import seaborn as sns
 
 
 class PlotMetrics:
-    def __init__(
-        self, data_dir="~/.cache/models/results/data", plots_dir="~/.cache/models/results/plots"
-    ):
-        self.data_dir = os.path.expanduser(data_dir)
-        self.plots_dir = os.path.expanduser(plots_dir)
+    def __init__(self, data_dir, plots_dir):
+        self.data_dir = data_dir
+        self.plots_dir = plots_dir
         self.model_name_field = "model_name"
         self.sort_field = "total_model_size_gb"
         self.quant_metrics = [

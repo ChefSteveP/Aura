@@ -10,7 +10,7 @@ from datetime import datetime
 
 
 class ModelEvaluator:
-    def __init__(self, model_name, model, tokenizer, results_dir="~/.cache/models/results/data"):
+    def __init__(self, model_name, model, tokenizer, results_dir):
         self.model = model.to("cuda")
         self.model_name = model_name
         self.tokenizer = tokenizer
@@ -109,13 +109,6 @@ class ModelEvaluator:
 
         # self.clear_cuda_memory()
         return self.save_df(results)
-
-    def clear_data_files(self):
-        """Clear data files before starting the evaluator."""
-        results_dir = os.path.expanduser(self.results_dir)
-        for file_name in os.listdir(results_dir):
-            if file_name.endswith(".csv"):
-                os.remove(os.path.join(results_dir, file_name))
 
     def clear_cuda_memory(self):
         del self.model

@@ -1,4 +1,3 @@
-# Validate nvcc
 echo -e "\n\n===== Check nvcc version =====\n\n"
 nvcc --version
 echo -e "\n"

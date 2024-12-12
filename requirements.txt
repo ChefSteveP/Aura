@@ -1,4 +1,4 @@
-# huggingface-hub==0.26.2
+huggingface-hub==0.26.2
 datasets==3.1.0
 wandb==0.18.5
 torch==2.5.1
