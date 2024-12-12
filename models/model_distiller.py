@@ -2,13 +2,14 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from transformers import pipeline
 from transformers import AutoModelForCausalLM
 
 # Reference: https://pytorch.org/tutorials/beginner/knowledge_distillation_tutorial.html
 
 class ModelDistiller:
     
-    def __init__(self, teacher, student):
+    def __init__(self, teacher, teacher_tokenizer, student, student_tokenizer):
         """
         Initialize the ModelDistiller with teacher and student models.
 
@@ -23,6 +24,8 @@ class ModelDistiller:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.teacher_model = teacher.to(self.device)
         self.student_model = student.to(self.device)
+        self.teacher_tokenizer = teacher_tokenizer
+        self.student_tokenizer = student_tokenizer
         
     def train_knowledge_distillation(self, train_loader, epochs, 
                                      learning_rate, T, soft_target_loss_weight, 

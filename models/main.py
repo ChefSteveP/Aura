@@ -113,14 +113,21 @@ def main():
         soft_target_loss_weight = 0.5  # placeholder
         ce_loss_weight = 0.5  # placeholder
         
-        train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        train_loader = DataLoader(dataset.to_torch(), batch_size=batch_size, shuffle=True)
         logging.info("Initialized data loader")
         
+        batch = next(iter(train_loader))
+        for key, value in batch.items():
+            print(f"Title: {key}")
+            print(f"Content: {value}")
+            print(f"Shape: {value.shape if isinstance(value, torch.Tensor) else 'Not a Tensor'}")
+            print("-" * 40)
         # Load Teacher Model (Llama 3B)
         llama_3b_name = "meta-llama/Llama-3.2-3B"
+        MODELS_DIR = "/home/shared_storage/models"
         try:
-            teacher_model = AutoModelForCausalLM.from_pretrained(llama_3b_name)
-            teacher_tokenizer = AutoTokenizer.from_pretrained(llama_3b_name)
+            teacher_model = AutoModelForCausalLM.from_pretrained(llama_3b_name, cache_dir=MODELS_DIR)
+            # teacher_tokenizer = AutoTokenizer.from_pretrained(llama_3b_name)
             logging.info(f"Loaded teacher model: {llama_3b_name}")
         except Exception as e:
             logging.error(f"Error loading teacher model: {e}")
@@ -130,8 +137,8 @@ def main():
         # This will be swapped out with the ptq quantized model later
         llama_1b_name = "meta-llama/Llama-3.2-1B"
         try:
-            student_model = AutoModelForCausalLM.from_pretrained(llama_1b_name)
-            student_tokenizer = AutoTokenizer.from_pretrained(llama_1b_name)
+            student_model = AutoModelForCausalLM.from_pretrained(llama_1b_name, cache_dir=MODELS_DIR)
+            # student_tokenizer = AutoTokenizer.from_pretrained(llama_1b_name)
             logging.info(f"Loaded student model: {llama_1b_name}")
         except Exception as e:
             logging.error(f"Failed to load student model: {llama_1b_name}. Error: {e}")
@@ -147,23 +154,23 @@ def main():
 
         model_distiller = ModelDistiller(teacher=teacher_model, student=model_quantizer)
         
-        logging.info("Initialized model distiller")
-        logging.info("Starting knowledge distillation training...")
+        # logging.info("Initialized model distiller")
+        # logging.info("Starting knowledge distillation training...")
         
-        try:
-            model_distiller.train_knowledge_distillation(
-                train_loader, epochs, learning_rate, T, soft_target_loss_weight, ce_loss_weight
-            )
-            logging.info("Knowledge distillation training completed.")
-        except Exception as e:
-            logging.error(f"Failed to train knowledge distillation: {e}")
-            exit(1)
+        # try:
+        #     model_distiller.train_knowledge_distillation(
+        #         train_loader, epochs, learning_rate, T, soft_target_loss_weight, ce_loss_weight
+        #     )
+        #     logging.info("Knowledge distillation training completed.")
+        # except Exception as e:
+        #     logging.error(f"Failed to train knowledge distillation: {e}")
+        #     exit(1)
             
-        try:
-            model_distiller.save_model()  # optionally provide save_path
-        except Exception as e:
-            logging.error(f"Failed to save distilled model: {e}")
-            exit(1)
+        # try:
+        #     model_distiller.save_model()  # optionally provide save_path
+        # except Exception as e:
+        #     logging.error(f"Failed to save distilled model: {e}")
+        #     exit(1)
 
     if args.evaluate:
         ModelEvaluator().clear_data_files(None, None, None)
