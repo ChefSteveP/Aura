@@ -1,3 +1,4 @@
+import os
 import time
 import logging
 from collections import Counter
@@ -45,21 +46,23 @@ class ModelEvaluator:
 
     def evaluate(self):
         # Determine model size
-        num_params, dtype, total_size_bytes, total_size_gb = self.compute_model_size()
+        num_params, dtype, bytes_per_param, total_size_bytes, total_size_gb = (
+            self.compute_model_size()
+        )
 
         results = []
         for i, prompt in enumerate(self.prompts, start=1):
             # Compute the total time to generate the prompt then return total_time and output
             self.generator_params.update({"text_inputs": prompt})
-            total_time, output = self.compute_total_time_and_generate_output()
+            total_time_ms, output = self.compute_total_time_and_generate_output()
 
             # Calculate number of tokens generated
             generated_text = output[0]["generated_text"]
             generated_tokens = len(self.tokenizer.tokenize(generated_text))
 
             # Calculate metrics
-            ttft = self.compute_ttft(prompt)  # time to first token
-            avg_time_per_token = self.compute_avg_time_per_token(total_time, generated_tokens)
+            ttft = self.compute_ttft()  # time to first token
+            avg_time_per_token = self.compute_avg_time_per_token(total_time_ms, generated_tokens)
             perplexity = self.compute_perplexity(generated_text)
             length = self.compute_length(generated_text)
             repetition_rate = self.compute_repetition_rate(generated_text)
@@ -70,19 +73,20 @@ class ModelEvaluator:
                 {
                     "prompt": prompt,
                     "generated_text": generated_text,
-                    "model": self.model_name,
+                    "model_name": self.model_name,
                     "perplexity": perplexity,
-                    "length": length,
+                    "response_length": length,
                     "repetition_rate": repetition_rate,
                     "distinct_2": distinct_2,
                     "readability": readability,
                     "time_to_first_token": ttft,
                     "avg_time_per_token": avg_time_per_token,
-                    "tokens_generated": generated_tokens,
-                    "num_params": num_params,
+                    "tokens_generated_per_response": generated_tokens,
+                    "num_model_params": num_params,
                     "dtype": dtype,
-                    "total_size_bytes": total_size_bytes,
-                    "total_size_gb": total_size_gb,
+                    "bytes_per_param": bytes_per_param,
+                    "total_model_size_bytes": total_size_bytes,
+                    "total_model_size_gb": total_size_gb,
                 }
             )
 
@@ -105,6 +109,13 @@ class ModelEvaluator:
 
         # self.clear_cuda_memory()
         return self.save_df(results)
+
+    def clear_data_files(self):
+        """Clear data files before starting the evaluator."""
+        results_dir = os.path.expanduser(self.results_dir)
+        for file_name in os.listdir(results_dir):
+            if file_name.endswith(".csv"):
+                os.remove(os.path.join(results_dir, file_name))
 
     def clear_cuda_memory(self):
         del self.model
@@ -140,9 +151,9 @@ class ModelEvaluator:
         total_size_bytes = num_params * bytes_per_param
         total_size_gb = total_size_bytes / (1024**3)
 
-        return num_params, dtype, total_size_bytes, total_size_gb
+        return num_params, dtype, bytes_per_param, total_size_bytes, total_size_gb
 
-    def compute_ttft(self, prompt):
+    def compute_ttft(self):
         """Time to first token"""
 
         # Update params for only 1 new token
@@ -152,20 +163,20 @@ class ModelEvaluator:
         # Time to first token calc
         start_time = time.time()
         self.generator(**params)
-        ttft = time.time() - start_time
+        ttft = (time.time() - start_time) * 1000
         return ttft
 
     def compute_total_time_and_generate_output(self):
         """Computes the total time taken for the generator to generate output and returns both."""
         start_time = time.time()
         output = self.generator(**self.generator_params)
-        total_time = time.time() - start_time
-        return total_time, output
+        total_time_ms = (time.time() - start_time) * 1000
+        return total_time_ms, output
 
-    def compute_avg_time_per_token(self, total_time, generated_tokens):
+    def compute_avg_time_per_token(self, total_time_ms, generated_tokens):
         """Calculate avg time per token."""
         if generated_tokens > 0:
-            return total_time / generated_tokens
+            return total_time_ms / generated_tokens
         return 0
 
     def compute_perplexity(self, generated_text):

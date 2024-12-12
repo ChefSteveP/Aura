@@ -9,8 +9,10 @@ from model_trainer import ModelTrainer
 from model_quantizer import ModelQuantizer
 from model_distiller import ModelDistiller
 from model_evaluator import ModelEvaluator
-from evaluate_metrics import EvaluateMetrics
+from plot_metrics import PlotMetrics
 
+
+def run_evaluator():
 
 def main():
     # Logging
@@ -122,6 +124,8 @@ def main():
         model_distiller.save_model()  # optionally provide save_path
 
     if args.evaluate:
+        ModelEvaluator().clear_data_files(None, None, None)
+        
         # Llama 1B
         model_name = "meta-llama/Llama-3.2-1B"
         model = AutoModelForCausalLM.from_pretrained(model_name)
@@ -129,7 +133,9 @@ def main():
         model_evaluator = ModelEvaluator(
             model_name="Llama-3_2-1B", model=model, tokenizer=tokenizer
         )
-        results = model_evaluator.evaluate()
+        # Clear data files before starting
+        model_evaluator.clear_data_files()
+        model_evaluator.evaluate()
 
         # Clear CUDA memory after 1B
         del model_evaluator
@@ -138,13 +144,13 @@ def main():
         torch.cuda.empty_cache()
 
         # Llama 3B
-        model_name = "meta-llama/Llama-3.2-3B"
-        model = AutoModelForCausalLM.from_pretrained(model_name)
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        model_evaluator = ModelEvaluator(
-            model_name="Llama-3_2-3B", model=model, tokenizer=tokenizer
+        llama_3b = "meta-llama/Llama-3.2-3B"
+        llama_3b_model = AutoModelForCausalLM.from_pretrained(llama_3b)
+        llama_3b_tokenizer = AutoTokenizer.from_pretrained(llama_3b)
+        llama_3b_evaluator = ModelEvaluator(
+            model_name="Llama-3_2-3B", model=llama_3b_model, tokenizer=llama_3b_tokenizer
         )
-        results = model_evaluator.evaluate()
+        model_evaluator.evaluate()
 
         # Clear CUDA memory after 3B
         del model_evaluator
@@ -152,8 +158,8 @@ def main():
         del tokenizer
         torch.cuda.empty_cache()
 
-        metrics = EvaluateMetrics()
-        metrics.plot_all_metrics()
+        plot_metrics = PlotMetrics()
+        plot_metrics.plot_all_metrics()
 
 
 if __name__ == "__main__":
