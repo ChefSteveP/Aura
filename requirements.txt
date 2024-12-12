@@ -1,19 +1,10 @@
-# llama-stack==0.0.47
-# fairscale==0.4.13
-# fire==0.7.0
-# blobfile==3.0.0
-# llama-models==0.0.47
-
-# llama-recipes demo
-
-# llama-recipes==0.0.4.post1
-# peft==0.13.2
-# bitsandbytes==0.42.0
-
-# test run
 # huggingface-hub==0.26.2
 datasets==3.1.0
 wandb==0.18.5
 torch==2.5.1
 transformers==4.47.0
 textstat==0.7.4
+black==24.10.0
+ipykernel==6.29.5
+matplotlib==3.9.3
+seaborn==0.13.2

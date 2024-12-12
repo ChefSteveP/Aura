@@ -14,17 +14,17 @@ class DataPreparation:
         download_path=None,
         split=None,
         tokenized_field_name=None,
-        cache_dir="~/.cache/data",
+        cache_dir="/home/shared_storage/models/data",
     ):
         self.huggingface_token = huggingface_token
         self.download_path = download_path
         self.split = split
         self.tokenized_field_name = tokenized_field_name
-        self.cache_dir = os.path.expanduser(cache_dir)
+        self.cache_dir = os.path.abspath(cache_dir)
         logger = logging.getLogger(__name__)
 
         # Set Hugging Face cache directory
-        os.environ["HF_HOME"] = os.path.expanduser("~/.cache")
+        os.environ["HF_HOME"] = os.path.abspath("/home/shared_storage")
 
         # Login to Hugging Face
         if self.huggingface_token:
@@ -41,7 +41,7 @@ class DataPreparation:
 
     def clear_non_english_arrow_files(self):
         """Delete .arrow files that are non-english"""
-        base_dir = os.path.expanduser("~/.cache/huggingface/datasets")
+        base_dir = os.path.abspath("/home/shared_storage/huggingface/datasets")
         if not os.path.exists(base_dir):
             logging.info(f"Directory {base_dir} does not exist.")
             return
@@ -63,7 +63,7 @@ class DataPreparation:
 
     def clear_arrow_files(self):
         """Remove .arrow files to save space on disk"""
-        base_dir = os.path.expanduser("~/.cache/huggingface/datasets")
+        base_dir = os.path.expanduser("home/shared_storage/huggingface/datasets")
         if not os.path.exists(base_dir):
             logging.info(f"Directory {base_dir} does not exist.")
             return
@@ -71,7 +71,7 @@ class DataPreparation:
         # Remove project_gutenberg .arrow files to save space
         for root, dirs, files in os.walk(base_dir):
             for file in files:
-                if (file.endswith(".arrow") and file.startswith("project_gutenberg")):
+                if file.endswith(".arrow") and file.startswith("project_gutenberg"):
                     # Check if the filename is not followed by "-en"
                     file_path = os.path.join(root, file)
                     try:
@@ -81,10 +81,10 @@ class DataPreparation:
                         logging.info(f"Failed to delete {file_path}: {e}")
 
     def clear_raw_files(self):
-        """Clear all raw files from /.cache/huggingface/hub/datasets--<download-path>"""
+        """Clear all raw files from /home/shared_storage/huggingface/hub/datasets--<download-path>"""
 
         # Identify raw, encoded files to delete
-        hub_dir = os.path.expanduser("~/.cache/huggingface/hub/")
+        hub_dir = os.path.abspath("/home/shared_storage/huggingface/hub/")
         data_dir = os.path.join(hub_dir, "datasets--" + self.download_path.replace("/", "--"))
         if os.path.exists(data_dir):
             # logging.info(f"Hub dir: {data_dir}")
@@ -107,7 +107,7 @@ class DataPreparation:
 
             # Tokenize and save the dataset
             dataset = self.tokenize_data(dataset)
-        
+
         # Print the total number of rows before processing
         logging.info(f"Number of rows in the dataset before processing: {len(dataset)}")
 
