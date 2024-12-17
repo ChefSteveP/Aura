@@ -1,5 +1,6 @@
 # model_distiller.py
 import random
+from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -58,7 +59,7 @@ class RandSnipitDataset(Dataset):
         
 class ModelDistiller:
     
-    def __init__(self, teacher, student):
+    def __init__(self, teacher, student, device="cpu"):
         """
         Initialize the ModelDistiller with teacher and student models.
 
@@ -69,7 +70,7 @@ class ModelDistiller:
         if not teacher or not student:
             raise ValueError("Both teacher and student models must be provided.")
         
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = device 
         self.teacher_model = teacher.to(self.device)
         self.student_model = student.to(self.device)
         
@@ -101,7 +102,10 @@ class ModelDistiller:
 
         for epoch in range(epochs):
             running_loss = 0.0
-            for batch in train_loader:
+            
+            progress_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs}", leave=True)
+            
+            for batch in progress_bar:
                 
                 optimizer.zero_grad()
                 input_ids = batch["input_ids"].to(self.device)           # size: (batch_size, seq_len)
@@ -129,13 +133,12 @@ class ModelDistiller:
                 # Weighted sum of the two losses
                 loss = soft_target_loss_weight * soft_targets_loss + ce_loss_weight * label_loss
 
-                print("Made it past loss calculation")
                 loss.backward()
-                print("Made it past backward pass")
                 optimizer.step()
-                print("Made it past optimizer step")
 
                 running_loss += loss.item()
+                
+                progress_bar.set_postfix(loss=loss.item())
 
             print(f"Epoch {epoch+1}/{epochs}, Loss: {running_loss / len(train_loader)}")
 

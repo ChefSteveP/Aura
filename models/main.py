@@ -118,7 +118,7 @@ def main():
         
         # hyper parameters
         epochs = 1
-        batch_size = 2
+        batch_size = 1
         learning_rate = 2e-5
         T = 1.0  # placeholder
         soft_target_loss_weight = 0.5  # placeholder
@@ -161,6 +161,9 @@ def main():
             logging.error(f"Failed to load student model: {LLAMA_1B_FILE_PATH}. Error: {e}")
             exit(1)
 
+        # device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = "cpu"
+        
         logging.info("Initialized model distiller")
         model_distiller = ModelDistiller(teacher=teacher_model, student=student_model)
         
