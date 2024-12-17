@@ -3,17 +3,20 @@ import argparse
 import os
 import torch
 import logging
+import random
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from data_preparation import DataPreparation
 from model_trainer import ModelTrainer
 from model_quantizer import ModelQuantizer
 from model_distiller import ModelDistiller
+from model_distiller import RandSnipitDataset
 from model_evaluator import ModelEvaluator
 from plot_metrics import PlotMetrics
 from constants import STORAGE_DIR, MODELS_DIR, RESULTS_DATA_DIR, RESULTS_PLOTS_DIR
 from model_utils import ModelUtils
 
 model_utils = ModelUtils()
+from torch.utils.data import DataLoader
 
 
 def main():
@@ -111,26 +114,75 @@ def main():
             model_trainer.qat()
 
     if args.distill:
-
-        if os.path.exists("./results/llama_literature_quantized"):
-            model_quantizer.model.load_state_dict(
-                torch.load("./results/llama_literature_quantized")
-            )
-        else:
-            model_quantizer.ptq()
-            model_quantizer.save_model()
-
         # Step 3.2 Knowledge Distialation (Recovery mthd. 2)
-        teacher_model = None  # placeholder
-        model_distiller = ModelDistiller(teacher_model, model_quantizer)
-        train_loader = None  # placeholder
+        
+        # hyper parameters
+        epochs = 1
+        batch_size = 1
+        learning_rate = 2e-5
         T = 1.0  # placeholder
         soft_target_loss_weight = 0.5  # placeholder
         ce_loss_weight = 0.5  # placeholder
-        model_distiller.train_knowledge_distillation(
-            train_loader, epochs, learning_rate, T, soft_target_loss_weight, ce_loss_weight
-        )
-        model_distiller.save_model()  # optionally provide save_path
+        
+        #grab random 2000 tokens from each book.
+        segment_dataset = RandSnipitDataset(dataset, segment_length=200) # max length 512?
+        train_loader = DataLoader(segment_dataset, batch_size=batch_size, shuffle=True)
+        logging.info("Initialized data loader")
+        
+        # Inspect one batch
+        # batch = next(iter(train_loader))
+        # for key, value in batch.items():
+        #     print(f"Title: {key}")
+        #     if isinstance(value, torch.Tensor):
+        #         print("Shape:", value.shape)
+        #     else:
+        #         print("Value type:", type(value))
+        #     print("-" * 40)
+        
+        # Load Teacher Model (Llama 3B)
+        # llama_1b_name = "meta-llama/Llama-3.2-1B" # For direct huggingface
+        LLAMA_1B_FILE_PATH = "/home/shared_storage/models/llama_1B.pt"
+        try:
+            # teacher_model = AutoModelForCausalLM.from_pretrained(llama_1b_name, cache_dir=MODELS_DIR) # For direct huggingface
+            teacher_model = torch.load(LLAMA_1B_FILE_PATH, weights_only=False)
+            logging.info(f"Loaded teacher model: {LLAMA_1B_FILE_PATH}")
+        except Exception as e:
+            logging.error(f"Error loading teacher model: {e}")
+            exit(1)
+        
+        # Load Student Model (LLaMA 1B)
+        # This will be swapped out with the ptq quantized model later
+        # llama_1b_name = "meta-llama/Llama-3.2-1B" # For direct huggingface
+        try:
+            # student_model = AutoModelForCausalLM.from_pretrained(llama_1b_name, cache_dir=MODELS_DIR) # For direct huggingface
+            student_model = torch.load(LLAMA_1B_FILE_PATH, weights_only=False)
+            logging.info(f"Loaded student model: {LLAMA_1B_FILE_PATH}")
+        except Exception as e:
+            logging.error(f"Failed to load student model: {LLAMA_1B_FILE_PATH}. Error: {e}")
+            exit(1)
+
+        # device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = "cpu"
+        
+        logging.info("Initialized model distiller")
+        model_distiller = ModelDistiller(teacher=teacher_model, student=student_model)
+        
+        logging.info("Starting knowledge distillation training...")        
+        try:
+            model_distiller.train_knowledge_distillation(
+                train_loader, epochs, learning_rate, T, soft_target_loss_weight, ce_loss_weight
+            )
+            logging.info("Knowledge distillation training completed.")
+        except Exception as e:
+            logging.error(f"Failed to train knowledge distillation: {e}")
+            exit(1)
+        
+        distilled_model_path = "/home/shared_storage/models/llama_1B_dist_llama_1B.pt"
+        try:
+            model_distiller.save_model(distilled_model_path)  # optionally provide save_path
+        except Exception as e:
+            logging.error(f"Failed to save distilled model: {e}")
+            exit(1)
 
     if args.evaluate:
         model_utils.clear_csv_files(RESULTS_DATA_DIR)
