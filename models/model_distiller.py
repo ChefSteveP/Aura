@@ -1,12 +1,61 @@
 # model_distiller.py
+import random
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data import Dataset
 from transformers import pipeline
 from transformers import AutoModelForCausalLM
 
 # Reference: https://pytorch.org/tutorials/beginner/knowledge_distillation_tutorial.html
+class RandSnipitDataset(Dataset):
+    def __init__(self, data, segment_length=512):
+        """
+        Args:
+            data (list of dict): Each element is expected to have keys:
+                "id" (str or int): Unique identifier for the entry
+                "text" (str): The original text
+                "input_ids" (list[int]): Tokenized input IDs
+                "attention_mask" (list[int]): Attention mask corresponding to input_ids
+        """
+        self.data = data
+        self.segment_length = segment_length
 
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        example = self.data[idx]
+        
+        input_ids = example["input_ids"]
+        attention_mask = example["attention_mask"]
+
+        # If the text is shorter than the desired segment length, take it all.
+        if len(input_ids) <= self.segment_length:
+            start_idx = 0
+            end_idx = len(input_ids)
+        else:
+            start_idx = random.randint(0, len(input_ids) - self.segment_length)
+            end_idx = start_idx + self.segment_length
+        
+        # Slice out the random segment setting aside the last token for the prediction label
+        input_ids_segment = input_ids[start_idx:end_idx-1]
+        attention_mask_segment = attention_mask[start_idx:end_idx-1]
+        label = input_ids[end_idx]
+        
+        # Convert to torch tensors
+        input_ids_tensor = torch.tensor(input_ids_segment, dtype=torch.long)
+        attention_mask_tensor = torch.tensor(attention_mask_segment, dtype=torch.long)
+        label_tensor = torch.tensor(label, dtype=torch.long)
+
+        return {
+            "id": example["id"],
+            "text": example["text"],                 # full reference text
+            "input_ids": input_ids_tensor,           # segment token
+            "attention_mask": attention_mask_tensor, # segment mask
+            "labels": label_tensor                   # Next token in sequence
+        }
+        
 class ModelDistiller:
     
     def __init__(self, teacher, student):
@@ -16,7 +65,6 @@ class ModelDistiller:
         Args:
             teacher (nn.Module): Pretrained teacher model.
             student (nn.Module): Student model to be trained.
-            device (str): Device to use for computation (e.g., 'cpu' or 'cuda').
         """
         if not teacher or not student:
             raise ValueError("Both teacher and student models must be provided.")
@@ -53,17 +101,19 @@ class ModelDistiller:
 
         for epoch in range(epochs):
             running_loss = 0.0
-            for inputs, labels in train_loader:
-                inputs, labels = inputs.to(self.device), labels.to(self.device)
-
+            for batch in train_loader:
+                
                 optimizer.zero_grad()
+                input_ids = batch["input_ids"].to(self.device)           # size: (batch_size, seq_len)
+                attention_mask = batch["attention_mask"].to(self.device) # size: (batch_size, seq_len)
+                labels = batch["labels"].to(self.device)                 # size: (batch_size,) single token
 
                 # Forward pass with the teacher model - do not save gradients here as we do not change the teacher's weights
                 with torch.no_grad():
-                    teacher_logits = teacher(inputs)
+                    teacher_logits = teacher(input_ids=input_ids, attention_mask=attention_mask).logits #extract logits
 
                 # Forward pass with the student model
-                student_logits = student(inputs)
+                student_logits = student(input_ids=input_ids, attention_mask=attention_mask).logits  #extract logits
 
                 #Soften the student logits by applying softmax first and log() second
                 soft_targets = nn.functional.softmax(teacher_logits / T, dim=-1)
@@ -72,14 +122,18 @@ class ModelDistiller:
                 # Calculate the soft targets loss. Scaled by T**2 as suggested by the authors of the paper "Distilling the knowledge in a neural network"
                 soft_targets_loss = (soft_targets * (soft_targets.log() - soft_prob)).sum(dim=-1).mean() * (T**2)
 
-                # Calculate the true label loss
-                label_loss = ce_loss(student_logits, labels)
+                # Calculate the last token label loss
+                last_token_logits = student_logits[:, -1, :]  # shape: (batch_size, vocab_size) 
+                label_loss = ce_loss(last_token_logits, labels)
 
                 # Weighted sum of the two losses
                 loss = soft_target_loss_weight * soft_targets_loss + ce_loss_weight * label_loss
 
+                print("Made it past loss calculation")
                 loss.backward()
+                print("Made it past backward pass")
                 optimizer.step()
+                print("Made it past optimizer step")
 
                 running_loss += loss.item()
 

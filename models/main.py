@@ -3,11 +3,13 @@ import argparse
 import os
 import torch
 import logging
+import random
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from data_preparation import DataPreparation
 from model_trainer import ModelTrainer
 from model_quantizer import ModelQuantizer
 from model_distiller import ModelDistiller
+from model_distiller import RandSnipitDataset
 from model_evaluator import ModelEvaluator
 from plot_metrics import PlotMetrics
 from constants import STORAGE_DIR, MODELS_DIR, RESULTS_DATA_DIR, RESULTS_PLOTS_DIR
@@ -116,55 +118,56 @@ def main():
         
         # hyper parameters
         epochs = 1
-        batch_size = 1
+        batch_size = 2
         learning_rate = 2e-5
         T = 1.0  # placeholder
         soft_target_loss_weight = 0.5  # placeholder
         ce_loss_weight = 0.5  # placeholder
         
-        train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        #grab random 2000 tokens from each book.
+        segment_dataset = RandSnipitDataset(dataset, segment_length=200) # max length 512?
+        train_loader = DataLoader(segment_dataset, batch_size=batch_size, shuffle=True)
         logging.info("Initialized data loader")
         
-        batch = next(iter(train_loader))
-        for key, value in batch.items():
-            print(f"Title: {key}")
-            print(f"Content: {value}")
-            print(f"Shape: {value.shape if isinstance(value, torch.Tensor) else 'Not a Tensor'}")
-            print("-" * 40)
+        # Inspect one batch
+        # batch = next(iter(train_loader))
+        # for key, value in batch.items():
+        #     print(f"Title: {key}")
+        #     if isinstance(value, torch.Tensor):
+        #         print("Shape:", value.shape)
+        #     else:
+        #         print("Value type:", type(value))
+        #     print("-" * 40)
+        
         # Load Teacher Model (Llama 3B)
-        llama_3b_name = "meta-llama/Llama-3.2-1B"
+        # llama_1b_name = "meta-llama/Llama-3.2-1B" # For direct huggingface
+        LLAMA_1B_FILE_PATH = "/home/shared_storage/models/llama_1B.pt"
         try:
-            teacher_model = AutoModelForCausalLM.from_pretrained(llama_3b_name, cache_dir=MODELS_DIR)
-            # teacher_tokenizer = AutoTokenizer.from_pretrained(llama_3b_name)
-            logging.info(f"Loaded teacher model: {llama_3b_name}")
+            # teacher_model = AutoModelForCausalLM.from_pretrained(llama_1b_name, cache_dir=MODELS_DIR) # For direct huggingface
+            teacher_model = torch.load(LLAMA_1B_FILE_PATH, weights_only=False)
+            logging.info(f"Loaded teacher model: {LLAMA_1B_FILE_PATH}")
         except Exception as e:
             logging.error(f"Error loading teacher model: {e}")
             exit(1)
         
         # Load Student Model (LLaMA 1B)
         # This will be swapped out with the ptq quantized model later
-        llama_1b_name = "meta-llama/Llama-3.2-1B"
+        # llama_1b_name = "meta-llama/Llama-3.2-1B" # For direct huggingface
         try:
-            student_model = AutoModelForCausalLM.from_pretrained(llama_1b_name, cache_dir=MODELS_DIR)
-            # student_tokenizer = AutoTokenizer.from_pretrained(llama_1b_name)
-            logging.info(f"Loaded student model: {llama_1b_name}")
+            # student_model = AutoModelForCausalLM.from_pretrained(llama_1b_name, cache_dir=MODELS_DIR) # For direct huggingface
+            student_model = torch.load(LLAMA_1B_FILE_PATH, weights_only=False)
+            logging.info(f"Loaded student model: {LLAMA_1B_FILE_PATH}")
         except Exception as e:
-            logging.error(f"Failed to load student model: {llama_1b_name}. Error: {e}")
+            logging.error(f"Failed to load student model: {LLAMA_1B_FILE_PATH}. Error: {e}")
             exit(1)
-            
-        # if os.path.exists("./results/llama_literature_quantized"):
-        #     model_quantizer.model.load_state_dict(
-        #         torch.load("./results/llama_literature_quantized")
-        #     )
-        # else:
-        #     model_quantizer.ptq()
-        #     model_quantizer.save_model()
 
+        logging.info("Initialized model distiller")
         model_distiller = ModelDistiller(teacher=teacher_model, student=student_model)
         
-        # logging.info("Initialized model distiller")
-        # logging.info("Starting knowledge distillation training...")
-        
+        logging.info("Starting knowledge distillation training...")
+        model_distiller.train_knowledge_distillation(
+                train_loader, epochs, learning_rate, T, soft_target_loss_weight, ce_loss_weight
+        )
         # try:
         #     model_distiller.train_knowledge_distillation(
         #         train_loader, epochs, learning_rate, T, soft_target_loss_weight, ce_loss_weight
