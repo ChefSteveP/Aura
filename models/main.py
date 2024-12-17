@@ -167,24 +167,22 @@ def main():
         logging.info("Initialized model distiller")
         model_distiller = ModelDistiller(teacher=teacher_model, student=student_model)
         
-        logging.info("Starting knowledge distillation training...")
-        model_distiller.train_knowledge_distillation(
+        logging.info("Starting knowledge distillation training...")        
+        try:
+            model_distiller.train_knowledge_distillation(
                 train_loader, epochs, learning_rate, T, soft_target_loss_weight, ce_loss_weight
-        )
-        # try:
-        #     model_distiller.train_knowledge_distillation(
-        #         train_loader, epochs, learning_rate, T, soft_target_loss_weight, ce_loss_weight
-        #     )
-        #     logging.info("Knowledge distillation training completed.")
-        # except Exception as e:
-        #     logging.error(f"Failed to train knowledge distillation: {e}")
-        #     exit(1)
-            
-        # try:
-        #     model_distiller.save_model()  # optionally provide save_path
-        # except Exception as e:
-        #     logging.error(f"Failed to save distilled model: {e}")
-        #     exit(1)
+            )
+            logging.info("Knowledge distillation training completed.")
+        except Exception as e:
+            logging.error(f"Failed to train knowledge distillation: {e}")
+            exit(1)
+        
+        distilled_model_path = "/home/shared_storage/models/llama_1B_dist_llama_1B.pt"
+        try:
+            model_distiller.save_model(distilled_model_path)  # optionally provide save_path
+        except Exception as e:
+            logging.error(f"Failed to save distilled model: {e}")
+            exit(1)
 
     if args.evaluate:
         model_utils.clear_csv_files(RESULTS_DATA_DIR)

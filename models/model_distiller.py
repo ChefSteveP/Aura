@@ -2,11 +2,13 @@
 import random
 from tqdm import tqdm
 import torch
+import os
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset
 from transformers import pipeline
 from transformers import AutoModelForCausalLM
+from model_utils import ModelUtils
 
 # Reference: https://pytorch.org/tutorials/beginner/knowledge_distillation_tutorial.html
 class RandSnipitDataset(Dataset):
@@ -142,19 +144,15 @@ class ModelDistiller:
 
             print(f"Epoch {epoch+1}/{epochs}, Loss: {running_loss / len(train_loader)}")
 
-    def save_model(self, save_path="./results/distilled_model"):
+    def save_model(self, save_path="/home/shared_storage/models/llama_1B_distilled.pt"):
         """
         Saves the distilled student model to a directory specified by `save_path`
 
         Args:
             save_path (str): The directory where the model will be saved. Defaults to "./results/distilled_model"
         """
-        if hasattr(self.student_model, "save_pretrained"):
-            self.student_model.save_pretrained(save_path)
-            print(f"Distilled model (Hugging Face) saved to '{save_path}'.")
-        else:
-            torch.save(self.student_model.state_dict(), f"{save_path}.pth")
-            print(f"Distilled model (PyTorch) saved to '{save_path}.pth'.")
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        torch.save(self.student_model, save_path)
 
 
 ############Instruction for use################################################
