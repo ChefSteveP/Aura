@@ -116,13 +116,13 @@ def main():
         
         # hyper parameters
         epochs = 1
-        batch_size = 8
+        batch_size = 1
         learning_rate = 2e-5
         T = 1.0  # placeholder
         soft_target_loss_weight = 0.5  # placeholder
         ce_loss_weight = 0.5  # placeholder
         
-        train_loader = DataLoader(dataset.to_torch(), batch_size=batch_size, shuffle=True)
+        train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         logging.info("Initialized data loader")
         
         batch = next(iter(train_loader))
@@ -132,8 +132,7 @@ def main():
             print(f"Shape: {value.shape if isinstance(value, torch.Tensor) else 'Not a Tensor'}")
             print("-" * 40)
         # Load Teacher Model (Llama 3B)
-        llama_3b_name = "meta-llama/Llama-3.2-3B"
-        MODELS_DIR = "/home/shared_storage/models"
+        llama_3b_name = "meta-llama/Llama-3.2-1B"
         try:
             teacher_model = AutoModelForCausalLM.from_pretrained(llama_3b_name, cache_dir=MODELS_DIR)
             # teacher_tokenizer = AutoTokenizer.from_pretrained(llama_3b_name)
@@ -161,7 +160,7 @@ def main():
         #     model_quantizer.ptq()
         #     model_quantizer.save_model()
 
-        model_distiller = ModelDistiller(teacher=teacher_model, student=model_quantizer)
+        model_distiller = ModelDistiller(teacher=teacher_model, student=student_model)
         
         # logging.info("Initialized model distiller")
         # logging.info("Starting knowledge distillation training...")
