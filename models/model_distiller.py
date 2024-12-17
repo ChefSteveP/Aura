@@ -151,7 +151,6 @@ class ModelDistiller:
         Args:
             save_path (str): The directory where the model will be saved. Defaults to "./results/distilled_model"
         """
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
         torch.save(self.student_model, save_path)
 
 
