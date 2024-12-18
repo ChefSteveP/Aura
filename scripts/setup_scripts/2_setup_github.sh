@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # SSH Key Generation
+cd ~
 echo -e "\n"
 read -p "Enter your GitHub email: " email
 read -p "Enter your GitHub username: " username

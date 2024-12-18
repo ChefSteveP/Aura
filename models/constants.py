@@ -25,6 +25,9 @@ KD_1B_FILE_PATH_PT = MODELS_DIR + "/llama_1B_kd.pt"
 # Huggingface model dirs
 PTQ_1B_FILE_PATH = MODELS_DIR + "/llama-1B-ptq"
 PTQ_3B_FILE_PATH = MODELS_DIR + "/llama-3B-ptq"
+PTQ_1B_CPU_FILE_PATH = MODELS_DIR + "/llama-1B-ptq-cpu"
+PTQ_3B_CPU_FILE_PATH = MODELS_DIR + "/llama-3B-ptq-cpu"
+
 QAT_3B_FILE_PATH = MODELS_DIR + "/llama-3B-qat"
 KD_1B_FILE_PATH = MODELS_DIR + "/llama-1B-kd"
 PTQ_KD_1B_FILE_PATH = MODELS_DIR + "/llama-1B-ptq-kd"

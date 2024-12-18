@@ -159,6 +159,8 @@ class ModelDistiller:
                 running_loss += loss.item()
 
                 progress_bar.set_postfix(loss=loss.item())
+                torch.cuda.empty_cache()
+                del input_ids, attention_mask, labels, teacher_logits, student_logits
 
             print(f"Epoch {epoch+1}/{epochs}, Loss: {running_loss / len(train_loader)}")
         return self.student_model

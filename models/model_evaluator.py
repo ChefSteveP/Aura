@@ -10,8 +10,8 @@ from datetime import datetime
 
 
 class ModelEvaluator:
-    def __init__(self, model_name, model, tokenizer, dataset, results_dir):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+    def __init__(self, model_name, model, tokenizer, device, dataset, results_dir):
+        self.device = device
         self.model = model.to(self.device)
         self.model = model
         self.model_name = model_name

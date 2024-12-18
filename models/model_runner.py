@@ -39,9 +39,9 @@ class ModelRunner:
 
         return parser.parse_args()
 
-    def run_ptq(self, model_name, tokenizer, file_path):
+    def run_ptq(self, model_name, tokenizer, device, file_path):
         q = ModelQuantizer()
-        model = AutoAWQForCausalLM.from_pretrained(model_name)
+        model = AutoAWQForCausalLM.from_pretrained(model_name, device_map=device)
         ptq_model = q.ptq(model, tokenizer, file_path)
         return ptq_model
 
@@ -86,14 +86,14 @@ class ModelRunner:
         return DataLoader(segment_dataset, batch_size=batch_size, shuffle=True)
 
     # Evaluate functions
-    def run_evaluate(self, models, tokenizer):
+    def run_evaluate(self, models, tokenizer, device):
         self.model_utils.clear_csv_files(RESULTS_DATA_DIR)
         eval_dataset = self.get_eval_dataset()
 
         total_time = 0
         for model_name, model in models.items():
             # self.log.info(f"Run evaluator for {model_name}")
-            model_time = self.evaluate_model(model_name, model, tokenizer, eval_dataset)
+            model_time = self.evaluate_model(model_name, model, tokenizer, device, eval_dataset)
             total_time += model_time
             model.to("cpu")
 
@@ -104,7 +104,7 @@ class ModelRunner:
         plot_metrics = PlotMetrics(RESULTS_DATA_DIR, RESULTS_PLOTS_DIR)
         plot_metrics.plot_all_metrics()
 
-    def evaluate_model(self, model_name, model, tokenizer, eval_dataset):
+    def evaluate_model(self, model_name, model, tokenizer, device, eval_dataset):
         """
         Steps include:
         - Print CUDA memory before running evaluator
@@ -117,6 +117,7 @@ class ModelRunner:
             model_name=model_name,
             model=model,
             tokenizer=tokenizer,
+            device=device,
             dataset=eval_dataset,
             results_dir=RESULTS_DATA_DIR,
         )

@@ -17,6 +17,8 @@ from constants import (
     KD_1B_FILE_PATH_PT,
     PTQ_KD_1B_FILE_PATH,
     PTQ_KD_3B_FILE_PATH,
+    PTQ_1B_CPU_FILE_PATH,
+    PTQ_3B_CPU_FILE_PATH,
 )
 
 
@@ -44,8 +46,8 @@ def main():
 
     if args.ptq:
         # Run on Llama 3B model and save to PTQ_3B_FILE_PATH
-        runner.run_ptq(LLAMA_1B_MODEL_NAME, tokenizer, PTQ_1B_FILE_PATH)
-        runner.run_ptq(LLAMA_3B_MODEL_NAME, tokenizer, PTQ_3B_FILE_PATH)
+        runner.run_ptq(LLAMA_1B_MODEL_NAME, tokenizer, "cuda", PTQ_1B_FILE_PATH)
+        runner.run_ptq(LLAMA_3B_MODEL_NAME, tokenizer, "cuda", PTQ_3B_FILE_PATH)
 
     if args.qat:
         # TODO: finish QAT loop
@@ -61,27 +63,27 @@ def main():
             file_path=PTQ_KD_1B_FILE_PATH,
         )
 
-        # ptq_kd_3B_model = runner.run_distill(
-        #     teacher_model_name=LLAMA_3B_MODEL_NAME,
-        #     student_model_name=PTQ_3B_FILE_PATH,
-        #     dataset=dataset,
-        #     device="cuda",
-        #     file_path=PTQ_KD_3B_FILE_PATH,
-        # )
+        ptq_kd_3B_model = runner.run_distill(
+            teacher_model_name=LLAMA_3B_MODEL_NAME,
+            student_model_name=PTQ_3B_FILE_PATH,
+            dataset=dataset,
+            device="cuda",
+            file_path=PTQ_KD_3B_FILE_PATH,
+        )
 
     if args.evaluate:
         # Define models to evaluate
         models = {
             "Llama-1B": AutoModelForCausalLM.from_pretrained(LLAMA_1B_MODEL_NAME),
-            # "Llama-3B": AutoModelForCausalLM.from_pretrained(LLAMA_3B_MODEL_NAME),
-            # "Llama-1B-PTQ": AutoModelForCausalLM.from_pretrained(PTQ_1B_FILE_PATH),
-            # "Llama-3B-PTQ": AutoModelForCausalLM.from_pretrained(PTQ_3B_FILE_PATH),
-            "Llama-1B-PTQ-KD": AutoModelForCausalLM.from_pretrained(PTQ_KD_1B_FILE_PATH),
-            "Llama-3B-PTQ-KD": AutoModelForCausalLM.from_pretrained(PTQ_KD_3B_FILE_PATH),
+            "Llama-3B": AutoModelForCausalLM.from_pretrained(LLAMA_3B_MODEL_NAME),
+            "Llama-1B-PTQ": AutoModelForCausalLM.from_pretrained(PTQ_1B_FILE_PATH),
+            "Llama-3B-PTQ": AutoModelForCausalLM.from_pretrained(PTQ_3B_FILE_PATH),
+            # "Llama-1B-PTQ-KD": AutoModelForCausalLM.from_pretrained(PTQ_KD_1B_FILE_PATH),
+            # "Llama-3B-PTQ-KD": AutoModelForCausalLM.from_pretrained(PTQ_KD_3B_FILE_PATH),
         }
 
         # Run evaluator
-        runner.run_evaluate(models, tokenizer)
+        runner.run_evaluate(models, tokenizer, "cuda")
 
 
 if __name__ == "__main__":
