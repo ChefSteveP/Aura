@@ -1,6 +1,6 @@
-huggingface-hub==0.26.2
-datasets==3.1.0
-wandb==0.18.5
+huggingface-hub==0.27.0
+datasets==3.2.0
+wandb==0.19.1
 torch==2.5.1
 transformers==4.47.0
 textstat==0.7.4
@@ -8,3 +8,5 @@ black==24.10.0
 ipykernel==6.29.5
 matplotlib==3.9.3
 seaborn==0.13.2
+peft==0.14.0
+autoawq==0.2.7.post3
