@@ -1,9 +1,12 @@
 import wandb
-from transformers import AutoModelForSequenceClassification, Trainer, TrainingArguments
-from transformers import AutoTokenizer
-from datasets import load_from_disk
-import os
 import torch
+from datasets import load_from_disk
+from transformers import (
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+    Trainer,
+    TrainingArguments,
+)
 from model_quantizer import ModelQuantizer
 
 
@@ -11,7 +14,7 @@ class ModelTrainer:
     def __init__(
         self,
         model_name,
-        saved_data_path,
+        dataset,
         model_results_path,
         num_labels=2,
         epochs=3,
@@ -21,7 +24,7 @@ class ModelTrainer:
         wandb_project="aura-ai",
     ):
         self.model_name = model_name
-        self.saved_data_path = saved_data_path
+        self.dataset = dataset
         self.model_results_path = model_results_path
         self.num_labels = num_labels
         self.epochs = epochs
@@ -51,30 +54,9 @@ class ModelTrainer:
             model_name, num_labels=self.num_labels
         ).to(self.device)
 
-    def load_data_from_path(self):
-        # ensure data path exists
-        if not os.path.exists(self.saved_data_path):
-            raise FileNotFoundError(
-                f"The specified data path {self.saved_data_path} does not exist."
-            )
-
-        # load data from cache
-        dataset = load_from_disk(self.saved_data_path)
-
-        # ensure data is tokenized
-        required_columns = ["input_ids", "attention_mask"]
-        for column in required_columns:
-            if column not in dataset.column_names:
-                raise ValueError(
-                    f"The dataset is not tokenized properly. Missing column '{column}' in the dataset."
-                )
-
-        return dataset
-
     def train_model(self):
         # load and train/test split data
-        dataset = self.load_data_from_path()
-        dataset = dataset.train_test_split(test_size=0.2)
+        dataset = self.dataset.train_test_split(test_size=0.2)
 
         training_args = TrainingArguments(
             output_dir=self.model_results_path,
@@ -108,8 +90,7 @@ class ModelTrainer:
 
     def qat(self):
         # load and train/test split data
-        dataset = self.load_data_from_path()
-        dataset = dataset.train_test_split(test_size=0.2)
+        dataset = self.dataset.train_test_split(test_size=0.2)
         # prepare QAT
         model_quantizer = ModelQuantizer()
         model_quantizer.prepare_qat()

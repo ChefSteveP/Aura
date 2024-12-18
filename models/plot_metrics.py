@@ -94,6 +94,7 @@ class PlotMetrics:
         # Save plot
         plot_path = os.path.join(self.plots_dir, f"{metric}_violin_plot.png")
         plt.savefig(plot_path)
+        plt.close()
 
     def plot_size_metric(self, metric):
         """Plots model sizes."""
@@ -121,6 +122,7 @@ class PlotMetrics:
         # Save plot
         plot_path = os.path.join(self.plots_dir, f"{metric}_size_plot.png")
         plt.savefig(plot_path)
+        plt.close()
 
     def plot_all_metrics(self):
         """Plots all metrics and saves output as png."""
