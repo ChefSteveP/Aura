@@ -13,8 +13,3 @@ seaborn==0.13.2
 peft==0.14.0
 bitsandbytes==0.45.0
 autoawq==0.2.7.post3
-
-# accelerate==1.2.1
-# auto-gptq==0.7.1
-# trl==0.13.0
-# optimum==1.23.3

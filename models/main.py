@@ -120,15 +120,11 @@ def main():
 
     if args.evaluate:
         # Define models to evaluate
-        base_model_1B = AutoModelForCausalLM.from_pretrained(LLAMA_1B_MODEL_NAME)
-        base_model_3B = AutoModelForCausalLM.from_pretrained(LLAMA_3B_MODEL_NAME)
-        ptq_model_1B = AutoModelForCausalLM.from_pretrained(PTQ_1B_FILE_PATH)
-        ptq_model_3B = AutoModelForCausalLM.from_pretrained(PTQ_3B_FILE_PATH)
         models = {
-            "Llama-1B": base_model_1B,
-            "Llama-3B": base_model_3B,
-            "Llama-1B-PTQ": ptq_model_1B,
-            "Llama-3B-PTQ": ptq_model_3B,
+            "Llama-1B": AutoModelForCausalLM.from_pretrained(LLAMA_1B_MODEL_NAME),
+            "Llama-3B": AutoModelForCausalLM.from_pretrained(LLAMA_3B_MODEL_NAME),
+            "Llama-1B-PTQ": AutoModelForCausalLM.from_pretrained(PTQ_1B_FILE_PATH),
+            "Llama-3B-PTQ": AutoModelForCausalLM.from_pretrained(PTQ_3B_FILE_PATH),
         }
 
         # Run evaluator
