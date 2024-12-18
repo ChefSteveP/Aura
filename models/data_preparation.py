@@ -2,6 +2,7 @@ import os
 import shutil
 import glob
 import logging
+import torch
 from torch.utils.data import DataLoader
 from datasets import load_dataset, load_from_disk
 from constants import STORAGE_DIR, DATA_DIR, MODELS_DIR, HUB_DIR, CACHE_DIR
@@ -201,3 +202,14 @@ class DataPreparation:
         # Get global maximum from max_index column
         max_token_index = max(max_indices["max_index"])
         return max_token_index + 1
+
+    def inspect_one_batch(self, data_loader):
+        """Inspect one batch of a DataLoader."""
+        batch = next(iter(data_loader))
+        for key, value in batch.items():
+            print(f"Title: {key}")
+            if isinstance(value, torch.Tensor):
+                print("Shape:", value.shape)
+            else:
+                print("Value type:", type(value))
+            print("-" * 40)
