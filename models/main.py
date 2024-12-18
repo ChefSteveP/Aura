@@ -35,9 +35,8 @@ def main():
         split="en",
         tokenized_field_name="text",
     )
-
     dataset = data_preparation.load_tokenized_dataset()
-    dataset = dataset.select(range(10))
+    # dataset = dataset.select(range(10))
 
     if args.train:
         # TODO: finish training loop
@@ -54,20 +53,21 @@ def main():
 
     if args.distill:
         ptq_kd_1B_model = runner.run_distill(
-            teacher_model_name=LLAMA_3B_MODEL_NAME,
-            student_model_name=PTQ_1B_FILE_PATH,
+            teacher_model_name=LLAMA_1B_MODEL_NAME,
+            # student_model_name=PTQ_1B_FILE_PATH,
+            student_model_name=LLAMA_1B_MODEL_NAME,
             dataset=dataset,
-            device="cuda",
+            device="cpu",
             file_path=PTQ_KD_1B_FILE_PATH,
         )
 
-        ptq_kd_3B_model = runner.run_distill(
-            teacher_model_name=LLAMA_3B_MODEL_NAME,
-            student_model_name=PTQ_3B_FILE_PATH,
-            dataset=dataset,
-            device="cuda",
-            file_path=PTQ_KD_3B_FILE_PATH,
-        )
+        # ptq_kd_3B_model = runner.run_distill(
+        #     teacher_model_name=LLAMA_3B_MODEL_NAME,
+        #     student_model_name=PTQ_3B_FILE_PATH,
+        #     dataset=dataset,
+        #     device="cuda",
+        #     file_path=PTQ_KD_3B_FILE_PATH,
+        # )
 
     if args.evaluate:
         # Define models to evaluate

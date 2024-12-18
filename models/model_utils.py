@@ -1,6 +1,7 @@
 # model_utils.py
 import os
 import shutil
+import psutil
 import logging
 import torch
 from constants import MODELS_DIR, TOKENIZERS_DIR
@@ -22,11 +23,22 @@ class ModelUtils:
             if file_name.endswith(".csv"):
                 os.remove(os.path.join(file_path, file_name))
 
-    def print_cuda_memory(self, message=None):
+    def log_gpu_memory(self, message=None):
         print_message = ""
         if message is not None:
-            print_message += f"{message}: "
+            print_message += f"[{message}]"
 
         cuda_memory = torch.cuda.memory_reserved() / (1024**2)
-        print_message += f"{cuda_memory:.2f} MB"
-        self.log.info(print_message)
+        self.log.info(f"{print_message} GPU Memory Usage (CUDA): {cuda_memory:.2f} MB")
+
+    def log_cpu_memory(self, message=None):
+        print_message = ""
+        if message is not None:
+            print_message += f"[{message}]"
+
+        rss = psutil.Process().memory_info().rss / (1024**2)
+        self.log.info(f"{print_message} CPU Memory Usage (RSS): {rss:.2f} MB")
+
+    def log_memory(self, message=None):
+        self.log_cpu_memory(message=None)
+        self.log_gpu_memory(message=None)

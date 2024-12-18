@@ -47,17 +47,21 @@ class ModelRunner:
 
     # Distill functions
     def run_distill(self, teacher_model_name, student_model_name, dataset, device, file_path):
-        self.model_utils.print_cuda_memory(message=f"{student_model_name} before")
+        self.model_utils.log_memory(message=f"Before loading KD models into mem")
         teacher_model = AutoModelForCausalLM.from_pretrained(teacher_model_name)
         student_model = AutoModelForCausalLM.from_pretrained(student_model_name)
-        model_distiller = ModelDistiller(teacher_model, student_model, device)
-        self.model_utils.print_cuda_memory(message=f"{student_model_name} after")
+        self.model_utils.log_memory(message=f"After loading KD models into mem")
+
+        model_distiller = ModelDistiller()
+        self.model_utils.log_memory(message=f"After KD initialization")
 
         train_loader = self.load_distill_dataset(
             dataset,
             batch_size=1,
             segment_length=200,
         )
+        self.model_utils.log_memory(message=f"After Distill Dataset")
+
         student_model = model_distiller.train_knowledge_distillation(
             train_loader,
             epochs=1,
@@ -65,12 +69,15 @@ class ModelRunner:
             T=1.0,
             soft_target_loss_weight=0.5,
             ce_loss_weight=0.5,
+            device=device,
+            student=student_model,
+            teacher=teacher_model,
         )
+        self.model_utils.log_memory(message=f"After KD")
+
+        self.log.info("Save model")
         student_model.save_pretrained(file_path)
-
-        teacher_model.to("cpu")
-        student_model.to("cpu")
-
+        del teacher_model
         return student_model
 
     def load_distill_dataset(self, dataset, batch_size, segment_length=200):
@@ -105,7 +112,7 @@ class ModelRunner:
         - Print CUDA memory after memory cleared via clear_cuda_memory()
         """
         start_time = time.time()
-        self.model_utils.print_cuda_memory(message=f"{model_name} before")
+        self.model_utils.log_memory(message=f"{model_name} before")
         eval = ModelEvaluator(
             model_name=model_name,
             model=model,
@@ -115,7 +122,7 @@ class ModelRunner:
         )
         eval.evaluate()
         eval.clear_cuda_memory()
-        self.model_utils.print_cuda_memory(message=f"{model_name} after")
+        self.model_utils.log_memory(message=f"{model_name} after")
         total_time = time.time() - start_time
         self.log.info(f"{total_time:.2f} sec to complete {model_name}.")
         return total_time
