@@ -1,13 +1,18 @@
 import os
+import time
 import logging
 import argparse
+from torch.utils.data import DataLoader
 from huggingface_hub import login
 from awq import AutoAWQForCausalLM
+from transformers import AutoModelForCausalLM
 from model_utils import ModelUtils
 from model_evaluator import ModelEvaluator
 from plot_metrics import PlotMetrics
 from prompt_generator import PromptGenerator
 from model_quantizer import ModelQuantizer
+from model_distiller import ModelDistiller
+from model_distiller import RandSnipitDataset
 from constants import RESULTS_DATA_DIR, RESULTS_PLOTS_DIR, PROMPTS, START_PROMPT
 
 
@@ -40,16 +45,52 @@ class ModelRunner:
         ptq_model = q.ptq(model, tokenizer, file_path)
         return ptq_model
 
+    # Distill functions
+    def run_distill(self, teacher_model_name, student_model_name, dataset, device, file_path):
+        self.model_utils.print_cuda_memory(message=f"{student_model_name} before")
+        teacher_model = AutoModelForCausalLM.from_pretrained(teacher_model_name)
+        student_model = AutoModelForCausalLM.from_pretrained(student_model_name)
+        model_distiller = ModelDistiller(teacher_model, student_model, device)
+        self.model_utils.print_cuda_memory(message=f"{student_model_name} after")
+
+        train_loader = self.load_distill_dataset(
+            dataset,
+            batch_size=1,
+            segment_length=200,
+        )
+        student_model = model_distiller.train_knowledge_distillation(
+            train_loader,
+            epochs=1,
+            learning_rate=2e-5,
+            T=1.0,
+            soft_target_loss_weight=0.5,
+            ce_loss_weight=0.5,
+        )
+        student_model.save_pretrained(file_path)
+
+        teacher_model.to("cpu")
+        student_model.to("cpu")
+
+        return student_model
+
+    def load_distill_dataset(self, dataset, batch_size, segment_length=200):
+        segment_dataset = RandSnipitDataset(dataset, segment_length)
+        # data_preparation.inspect_one_batch(train_loader)
+        return DataLoader(segment_dataset, batch_size=batch_size, shuffle=True)
+
     # Evaluate functions
     def run_evaluate(self, models, tokenizer):
         self.model_utils.clear_csv_files(RESULTS_DATA_DIR)
         eval_dataset = self.get_eval_dataset()
 
+        total_time = 0
         for model_name, model in models.items():
-            self.log.info(f"Run evaluator for {model_name}")
-            self.evaluate_model(model_name, model, tokenizer, eval_dataset)
+            # self.log.info(f"Run evaluator for {model_name}")
+            model_time = self.evaluate_model(model_name, model, tokenizer, eval_dataset)
+            total_time += model_time
             model.to("cpu")
 
+        self.log.info(f"{total_time:.2f} sec to complete evaluation loop.")
         self.plot_evaluation_metrics()
 
     def plot_evaluation_metrics(self):
@@ -63,6 +104,7 @@ class ModelRunner:
         - Run evaluator on one model
         - Print CUDA memory after memory cleared via clear_cuda_memory()
         """
+        start_time = time.time()
         self.model_utils.print_cuda_memory(message=f"{model_name} before")
         eval = ModelEvaluator(
             model_name=model_name,
@@ -74,6 +116,9 @@ class ModelRunner:
         eval.evaluate()
         eval.clear_cuda_memory()
         self.model_utils.print_cuda_memory(message=f"{model_name} after")
+        total_time = time.time() - start_time
+        self.log.info(f"{total_time:.2f} sec to complete {model_name}.")
+        return total_time
 
     def get_eval_dataset(self):
         pg = PromptGenerator()
