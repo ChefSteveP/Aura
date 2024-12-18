@@ -20,6 +20,7 @@ LLAMA_3B_MODEL_NAME = "meta-llama/Llama-3.2-3B"
 LLAMA_1B_FILE_PATH = MODELS_DIR + "/llama_1B.pt"
 LLAMA_3B_FILE_PATH = MODELS_DIR + "/llama_3B.pt"
 DQ_3B_FILE_PATH = MODELS_DIR + "/llama_3B_dq.pt"
+KD_1B_FILE_PATH = MODELS_DIR + "/llama_1B_dist_llama_1B.pt"
 
 # Huggingface model dirs
 PTQ_1B_FILE_PATH = MODELS_DIR + "/llama_1B_ptq"

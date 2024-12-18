@@ -13,6 +13,7 @@ from constants import (
     LLAMA_1B_FILE_PATH,
     PTQ_1B_FILE_PATH,
     PTQ_3B_FILE_PATH,
+    KD_1B_FILE_PATH,
 )
 
 
@@ -22,18 +23,18 @@ def main():
     runner = ModelRunner()
     args = runner.parse_args()
 
-    # General initializations for models/tokenizers/datasets
-    tokenizer = AutoTokenizer.from_pretrained(LLAMA_3B_MODEL_NAME)
+    # # General initializations for models/tokenizers/datasets
+    # tokenizer = AutoTokenizer.from_pretrained(LLAMA_3B_MODEL_NAME)
 
-    data_preparation = DataPreparation(
-        tokenizer,
-        download_path="manu/project_gutenberg",
-        split="en",
-        tokenized_field_name="text",
-    )
+    # data_preparation = DataPreparation(
+    #     tokenizer,
+    #     download_path="manu/project_gutenberg",
+    #     split="en",
+    #     tokenized_field_name="text",
+    # )
 
-    dataset = data_preparation.load_tokenized_dataset()
-    dataset = dataset.select(range(10))
+    # dataset = data_preparation.load_tokenized_dataset()
+    # dataset = dataset.select(range(10))
 
     if args.train:
         # TODO: finish training loop
@@ -120,15 +121,18 @@ def main():
 
     if args.evaluate:
         # Define models to evaluate
+        kd_model = torch.load(LLAMA_1B_FILE_PATH)
+        print(type(kd_model))
         models = {
-            "Llama-1B": AutoModelForCausalLM.from_pretrained(LLAMA_1B_MODEL_NAME),
-            "Llama-3B": AutoModelForCausalLM.from_pretrained(LLAMA_3B_MODEL_NAME),
-            "Llama-1B-PTQ": AutoModelForCausalLM.from_pretrained(PTQ_1B_FILE_PATH),
-            "Llama-3B-PTQ": AutoModelForCausalLM.from_pretrained(PTQ_3B_FILE_PATH),
+            # "Llama-1B": AutoModelForCausalLM.from_pretrained(LLAMA_1B_MODEL_NAME),
+            # "Llama-3B": AutoModelForCausalLM.from_pretrained(LLAMA_3B_MODEL_NAME),
+            # "Llama-1B-PTQ": AutoModelForCausalLM.from_pretrained(PTQ_1B_FILE_PATH),
+            # "Llama-3B-PTQ": AutoModelForCausalLM.from_pretrained(PTQ_3B_FILE_PATH),
+            "Llama-1B-KD": torch.load(LLAMA_1B_FILE_PATH),
         }
 
         # Run evaluator
-        runner.run_evaluate(models, tokenizer)
+        # runner.run_evaluate(models, tokenizer)
 
 
 if __name__ == "__main__":
