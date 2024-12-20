@@ -2,9 +2,16 @@ import os
 import shutil
 import glob
 import logging
+import torch
 from torch.utils.data import DataLoader
 from datasets import load_dataset, load_from_disk
-from constants import STORAGE_DIR, DATA_DIR, MODELS_DIR, HUB_DIR, CACHE_DIR
+from constants import (
+    STORAGE_DIR,
+    DATA_DIR,
+    MODELS_DIR,
+    HUB_DIR,
+    CACHE_DIR,
+)
 
 
 class DataPreparation:
@@ -15,23 +22,30 @@ class DataPreparation:
         split=None,
         tokenized_field_name=None,
         tokenize_batch_size=100,
+        tokenize_num_proc=1,
         dataloader_batch_size=8,
         dataset_columns=["input_ids", "attention_mask"],
         test_size=0.2,
+        storage_dir=STORAGE_DIR,
+        data_dir=DATA_DIR,
+        models_dir=MODELS_DIR,
+        cache_dir=CACHE_DIR,
+        hub_dir=HUB_DIR,
     ):
         self.tokenizer = tokenizer
         self.download_path = download_path
         self.split = split
         self.tokenized_field_name = tokenized_field_name
         self.tokenize_batch_size = tokenize_batch_size
+        self.tokenize_num_proc = tokenize_num_proc
         self.dataloader_batch_size = dataloader_batch_size
         self.dataset_columns = dataset_columns
         self.test_size = test_size
-        self.storage_dir = STORAGE_DIR
-        self.data_dir = DATA_DIR
-        self.models_dir = MODELS_DIR
-        self.cache_dir = CACHE_DIR
-        self.hub_dir = HUB_DIR
+        self.storage_dir = storage_dir
+        self.data_dir = data_dir
+        self.models_dir = models_dir
+        self.cache_dir = cache_dir
+        self.hub_dir = hub_dir
         self.cached_dirs_to_remove = [self.storage_dir + "/manu___project_gutenberg"]
 
         # Enable logging
@@ -103,7 +117,7 @@ class DataPreparation:
             # self.log.info(f"Hub dir: {data_dir}")
             shutil.rmtree(data_dir)
 
-    def load_tokenized_dataset(self):
+    def load_tokenized_dataset(self, limit=None):
         """Check for tokenized cache. If missing, load raw dataset, tokenize, and save tokenized dataset."""
         if os.path.exists(self.data_dir):
             self.log.info("Loading tokenized dataset from cache...")
@@ -115,7 +129,8 @@ class DataPreparation:
             dataset = load_dataset(
                 path=self.download_path, split=self.split, cache_dir=self.cache_dir
             )
-            dataset = dataset.select(range(10))
+            if limit:
+                dataset = dataset.select(range(limit))
 
             # Remove raw, encoded files
             # self.clear_raw_dataset_files()
@@ -163,7 +178,12 @@ class DataPreparation:
             self.log.info("Dataset already tokenized.")
         else:
             self.log.info("Tokenizing dataset...")
-            dataset = dataset.map(self.tokenizer_function, batched=True, batch_size=batch_size)
+            dataset = dataset.map(
+                self.tokenizer_function,
+                batched=True,
+                num_proc=self.tokenize_num_proc,
+                batch_size=batch_size,
+            )
 
             # Clear the dataset cache
             # self.clear_gutenberg_arrow_files()
@@ -195,9 +215,130 @@ class DataPreparation:
         max_indices = dataset.map(
             lambda x: {"max_index": max(x["input_ids"])},
             batched=False,
-            remove_columns=dataset.column_names,
+            remove_columns=["text"],
         )
 
         # Get global maximum from max_index column
         max_token_index = max(max_indices["max_index"])
         return max_token_index + 1
+
+    def inspect_one_batch(self, data_loader):
+        """Inspect one batch of a DataLoader."""
+        batch = next(iter(data_loader))
+        for key, value in batch.items():
+            print(f"Title: {key}")
+            if isinstance(value, torch.Tensor):
+                print("Shape:", value.shape)
+            else:
+                print("Value type:", type(value))
+            print("-" * 40)
+
+    def decode_sample(self, tokenizer, input_ids):
+        return tokenizer.decode(input_ids, skip_special_tokens=True)
+
+    def inspect_samples(self, data_loader, tokenizer, samples):
+        for i, batch in enumerate(data_loader, 1):
+            input_ids = batch["input_ids"]
+            # Iterate through each sample in the batch
+            for i in range(input_ids.size(0)):
+                decoded_text = self.decode_sample(tokenizer, input_ids[i])
+                print(f"Sample {i+1}:")
+                print("Decoded Text:", decoded_text)
+            if i == samples:
+                break
+
+    def create_data_loader(self, block_size=128, samples=None):
+        if os.path.exists(self.data_dir):
+            self.log.info("Loading tokenized dataset from cache...")
+            dataset = load_from_disk(self.data_dir)
+            dataset = dataset.shuffle()
+
+            if samples:  # select number of samples
+                dataset = dataset.select(range(samples))
+
+            return DataLoader(
+                dataset,
+                batch_size=self.dataloader_batch_size,
+                shuffle=True,
+                num_workers=self.tokenize_num_proc,
+            )
+
+        dataset = load_dataset(path=self.download_path, split=self.split, cache_dir=self.cache_dir)
+
+        # Tokenize dataset
+        def tokenize_function(examples):
+            return self.tokenizer(
+                examples["text"],
+                return_special_tokens_mask=True,
+                truncation=True,
+                max_length=block_size,
+            )
+
+        tokenized_dataset = dataset.map(tokenize_function, batched=True, remove_columns=["text"])
+
+        # Group texts into blocks of size `block_size`
+        def group_texts(examples):
+            # Concatenate all examples
+            concatenated = {k: sum(examples[k], []) for k in examples}
+            total_length = len(concatenated["input_ids"])
+
+            # Drop remainder
+            total_length = (total_length // block_size) * block_size
+
+            # Split by chunks of block_size
+            result = {
+                k: [t[i : i + block_size] for i in range(0, total_length, block_size)]
+                for k, t in concatenated.items()
+            }
+            return result
+
+        lm_dataset = tokenized_dataset.map(group_texts, batched=True)
+
+        # Create labels
+        def create_labels(examples):
+            examples["labels"] = examples["input_ids"].copy()
+            pad_token_id = self.tokenizer.pad_token_id
+            if pad_token_id is None:
+                # If no pad_token_id (e.g., GPT-2), use -100
+                pad_token_id = -100
+            examples["labels"] = [
+                [(-100 if token == pad_token_id else token) for token in seq]
+                for seq in examples["labels"]
+            ]
+            return examples
+
+        lm_dataset = lm_dataset.map(create_labels, batched=True)
+
+        # Set PyTorch format
+        lm_dataset.set_format("torch", columns=["input_ids", "attention_mask", "labels"])
+        lm_dataset.save_to_disk(self.data_dir)
+        lm_dataset = lm_dataset.shuffle(seed=42)
+        if samples:
+            lm_dataset = lm_dataset.select(range(samples))
+
+        # Create and return a DataLoader
+        data_loader = DataLoader(
+            lm_dataset,
+            batch_size=self.dataloader_batch_size,
+            shuffle=True,
+            num_workers=self.tokenize_num_proc,
+        )
+        return data_loader
+
+    def slice_text_from_nth_sentence(self, examples, start_sentence=25):
+        """Slices the 'text' field of each example from the Nth sentence onward by splitting on '.'."""
+
+        modified_texts = []
+        for text in examples["text"]:
+            sentences = text.split(".")
+
+            # Remove leading/trailing whitespace
+            sentences = [sentence.strip() for sentence in sentences if sentence.strip()]
+
+            if len(sentences) > start_sentence:
+                # Join sentences from the Nth sentence onward and add a period at the end
+                new_text = ". ".join(sentences[start_sentence:]) + "."
+                modified_texts.append(new_text)
+            else:
+                modified_texts.append(text)
+        return {"text": modified_texts}

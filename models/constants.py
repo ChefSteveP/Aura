@@ -16,19 +16,17 @@ MODELS_DIR = STORAGE_DIR + "/models"
 LLAMA_1B_MODEL_NAME = "meta-llama/Llama-3.2-1B"
 LLAMA_3B_MODEL_NAME = "meta-llama/Llama-3.2-3B"
 
-# .pt models
-LLAMA_1B_FILE_PATH = MODELS_DIR + "/llama_1B.pt"
-LLAMA_3B_FILE_PATH = MODELS_DIR + "/llama_3B.pt"
-DQ_3B_FILE_PATH = MODELS_DIR + "/llama_3B_dq.pt"
+# KD
+KD_1B_FILE_PATH = MODELS_DIR + "/llama-1B-kd"
+KD_PTQ_1B_FILE_PATH = MODELS_DIR + "/llama-1B-kd-ptq"
 
-# Huggingface model dirs
-PTQ_1B_FILE_PATH = MODELS_DIR + "/llama_1B_ptq"
-PTQ_3B_FILE_PATH = MODELS_DIR + "/llama_3B_ptq"
-QAT_3B_FILE_PATH = MODELS_DIR + "/llama_3B_qat"
+# PTQ AWQ
+PTQ_1B_FILE_PATH = MODELS_DIR + "/llama-1B-ptq"
+PTQ_3B_FILE_PATH = MODELS_DIR + "/llama-3B-ptq"
 
 # Tokenizer file paths
 TOKENIZERS_DIR = STORAGE_DIR + "/tokenizers"
-LLAMA_3B_TOKENIZER_FILE_PATH = TOKENIZERS_DIR + "/llama_3B_tokenizer"
+LLAMA_3B_TOKENIZER = TOKENIZERS_DIR + "/llama-3B-tokenizer"
 
 # Cache directories
 HUB_DIR = STORAGE_DIR + "/hub"

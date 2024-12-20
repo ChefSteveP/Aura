@@ -1,3 +1,4 @@
+import re
 import time
 import logging
 from collections import Counter
@@ -10,8 +11,6 @@ from datetime import datetime
 
 class ModelEvaluator:
     def __init__(self, model_name, model, tokenizer, dataset, results_dir):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model = model.to(self.device)
         self.model = model
         self.model_name = model_name
         self.tokenizer = tokenizer
@@ -35,7 +34,6 @@ class ModelEvaluator:
             "text-generation",
             model=self.model,
             tokenizer=self.tokenizer,
-            device=-1 if self.device == "cpu" else 0,  # cuda == 0; cpu == -1
             truncation=True,
         )
 
@@ -74,52 +72,38 @@ class ModelEvaluator:
         )
 
         results = []
-        for i, row in enumerate(self.dataset, start=1):
-            # self.log.info(f"Prompt {i}: {row["query"]}")
-            self.log.info(f"Prompt {i}")
+        for i, row in enumerate(self.dataset):
+            self.log.info(f"Prompt {i + 1}")
 
-            # self.log.info(f"Calculate total time to generate the output")
             params = self._get_generator_params(text_inputs=row["prompt"])
             total_time_ms, output = self.compute_total_time_and_generate_output(params)
 
-            # self.log.info(f"Calculate number of tokens generated")
             generated_text = output[0]["generated_text"]
             generated_tokens = len(self.tokenizer.tokenize(generated_text))
+            response = self.extract_response(row["query"], generated_text)
 
             # Calculate metrics
-            # self.log.info(f"Calculate time-to-first-token")
             ttft = self.compute_ttft(row["prompt"])
-
-            # self.log.info(f"Calculate avg-time-per-token")
             avg_time_per_token = self.compute_avg_time_per_token(total_time_ms, generated_tokens)
-
-            # self.log.info(f"Calculate perplexity")
             perplexity = self.compute_perplexity(generated_text)
-
-            # self.log.info(f"Calculate length")
             length = self.compute_length(generated_text)
-
-            # self.log.info(f"Calculate repetition rate")
             repetition_rate = self.compute_repetition_rate(generated_text)
-
-            # self.log.info(f"Calculate distinct N")
             distinct_2 = self.distinct_n(generated_text, n=2)
-
-            # self.log.info(f"Calculate readability score")
             readability = self.compute_readability_score(generated_text)
 
             results.append(
                 {
                     "prompt": row["query"],
-                    "generated_text": generated_text,
+                    "generated_text": response,
+                    "full_generated_text": generated_text,
                     "model_name": self.model_name,
                     "perplexity": perplexity,
-                    "response_length": length,
+                    "token_response_length": length,
                     "repetition_rate": repetition_rate,
                     "distinct_2": distinct_2,
                     "readability": readability,
-                    "time_to_first_token": ttft,
-                    "avg_time_per_token": avg_time_per_token,
+                    "time_to_first_token_ms": ttft,
+                    "avg_time_per_token_ms": avg_time_per_token,
                     "tokens_generated_per_response": generated_tokens,
                     "num_model_params": num_params,
                     "dtype": dtype,
@@ -129,13 +113,7 @@ class ModelEvaluator:
                 }
             )
             torch.cuda.empty_cache()
-
-        # self.log.info(f"Save df")
         return self.save_df(results)
-
-    def clear_cuda_memory(self):
-        self.model.to("cpu")
-        torch.cuda.empty_cache()
 
     def get_formatted_datetime(self):
         """Utilized for functions such as save_df()."""
@@ -205,7 +183,6 @@ class ModelEvaluator:
 
     def compute_perplexity(self, generated_text):
         inputs = self.tokenizer(generated_text, return_tensors="pt", truncation=True)
-        inputs = {key: val.to(self.model.device) for key, val in inputs.items()}
         with torch.no_grad():
             loss = self.model(**inputs, labels=inputs["input_ids"]).loss.item()
         return torch.exp(torch.tensor(loss)).item()
@@ -227,5 +204,11 @@ class ModelEvaluator:
     def compute_readability_score(self, generated_text):
         return textstat.flesch_reading_ease(generated_text)
 
-    def get_eval_dataset(self):
-        return
+    def extract_response(self, prompt, response):
+        """Use regex to extract the agent's response from a full prompt-generated text that includes system calls."""
+        starting_prompt = f"###\nUser: {re.escape(prompt)}\nAssistant: Here's the story:"
+        pattern = rf"{starting_prompt}(.*)"
+        match = re.search(pattern, response, re.DOTALL)
+        if match:
+            return match.group(1).strip()
+        return ""
