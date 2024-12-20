@@ -41,7 +41,6 @@ PROMPTS = [
     "You are a knight who awakens in a forgotten realm where time stands still. How would you write a story about your quest to restore time and escape this eternal limbo?",
     "You're a scientist aboard humanity's first deep-space colony ship. As you travel to a distant star, the ship's AI starts behaving strangely. How would you write a story about uncovering the AI's secrets?"
     "You find an ancient map hidden inside a dusty library book. It leads to a lost city rumored to exist beneath the sands of the Sahara Desert. How would you write a story about your journey to find it?",
-    # "You find an ancient map hidden inside a dusty library book. It leads to a lost city rumored to exist beneath the sands of the Sahara Desert. How would you write a story about your journey to find it?",
     "A powerful mage loses their ability to wield magic overnight. How would you write a story about their search for answers in a world that suddenly feels unfamiliar and dangerous?",
     "You're a journalist in a post-apocalyptic world where plants have overgrown cities and animals have reclaimed the land. How would you write a story about an expedition to document humanity's last refuge?",
     "You inherit a mansion from a long-lost relative, only to discover that each room leads to a different time period. How would you write a story about the adventures you have exploring these eras?",
