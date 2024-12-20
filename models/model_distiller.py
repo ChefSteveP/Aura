@@ -6,9 +6,6 @@ import os
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset
-from transformers import pipeline
-from transformers import AutoModelForCausalLM
-from model_utils import ModelUtils
 
 
 # Reference: https://pytorch.org/tutorials/beginner/knowledge_distillation_tutorial.html
@@ -37,9 +34,9 @@ class RandSnipitDataset(Dataset):
         # If the text is shorter than the desired segment length, take it all.
         if len(input_ids) <= self.segment_length:
             start_idx = 0
-            end_idx = len(input_ids)
+            end_idx = len(input_ids) - 1
         else:
-            start_idx = random.randint(0, len(input_ids) - self.segment_length)
+            start_idx = random.randint(0, len(input_ids) - self.segment_length - 1)
             end_idx = start_idx + self.segment_length
 
         # Slice out the random segment setting aside the last token for the prediction label
@@ -62,32 +59,11 @@ class RandSnipitDataset(Dataset):
 
 
 class ModelDistiller:
-
-    def __init__(self, teacher, student, device="cpu"):
-        """
-        Initialize the ModelDistiller with teacher and student models.
-
-        Args:
-            teacher (nn.Module): Pretrained teacher model.
-            student (nn.Module): Student model to be trained.
-        """
-        if not teacher or not student:
-            raise ValueError("Both teacher and student models must be provided.")
-
-        self.device = device
-        self.teacher_model = teacher.to(self.device)
-        self.student_model = student.to(self.device)
+    def __init__(self):
+        pass
 
     def train_knowledge_distillation(
-        self,
-        train_loader,
-        epochs,
-        learning_rate,
-        T,
-        soft_target_loss_weight,
-        ce_loss_weight,
-        teacher=None,
-        student=None,
+        self, train_loader, epochs, learning_rate, T, alpha, teacher, student
     ):
         """
         Trains the student model using knowledge distillation from the teacher model.
@@ -102,12 +78,9 @@ class ModelDistiller:
             teacher (nn.Module, optional): Teacher model (defaults to self.teacher_model).
             student (nn.Module, optional): Student model (defaults to self.student_model).
         """
-
-        teacher = teacher or self.teacher_model
-        student = student or self.student_model
-
-        ce_loss = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(student.parameters(), lr=learning_rate)
+        ce_loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
+        kl_loss_fn = nn.KLDivLoss(reduction="batchmean")
+        optimizer = optim.AdamW(student.parameters(), lr=learning_rate)
 
         teacher.eval()  # Teacher set to evaluation mode
         student.train()  # Student to train mode
@@ -118,52 +91,46 @@ class ModelDistiller:
             progress_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs}", leave=True)
 
             for batch in progress_bar:
-
                 optimizer.zero_grad()
-                input_ids = batch["input_ids"].to(self.device)  # size: (batch_size, seq_len)
-                attention_mask = batch["attention_mask"].to(
-                    self.device
-                )  # size: (batch_size, seq_len)
-                labels = batch["labels"].to(self.device)  # size: (batch_size,) single token
+                input_ids = batch["input_ids"]
+                attention_mask = batch["attention_mask"]
+                labels = batch["labels"]
 
-                # Forward pass with the teacher model - do not save gradients here as we do not change the teacher's weights
+                # Forward pass with the teacher model
                 with torch.no_grad():
                     teacher_logits = teacher(
                         input_ids=input_ids, attention_mask=attention_mask
-                    ).logits  # extract logits
+                    ).logits
 
                 # Forward pass with the student model
-                student_logits = student(
-                    input_ids=input_ids, attention_mask=attention_mask
-                ).logits  # extract logits
+                student_logits = student(input_ids=input_ids, attention_mask=attention_mask).logits
 
-                # Soften the student logits by applying softmax first and log() second
-                soft_targets = nn.functional.softmax(teacher_logits / T, dim=-1)
-                soft_prob = nn.functional.log_softmax(student_logits / T, dim=-1)
+                batch_size, seq_length, vocab_size = student_logits.size()
+                student_logits_flat = student_logits.view(-1, vocab_size)
+                teacher_logits_flat = teacher_logits.view(-1, vocab_size)
+                labels_flat = labels.view(-1)
 
-                # Calculate the soft targets loss. Scaled by T**2 as suggested by the authors of the paper "Distilling the knowledge in a neural network"
-                soft_targets_loss = (soft_targets * (soft_targets.log() - soft_prob)).sum(
-                    dim=-1
-                ).mean() * (T**2)
+                # Compute soft targets with temperature scaling
+                teacher_probs = nn.functional.softmax(teacher_logits_flat / T, dim=-1)
+                student_log_probs = nn.functional.log_softmax(student_logits_flat / T, dim=-1)
 
-                # Calculate the last token label loss
-                last_token_logits = student_logits[:, -1, :]  # shape: (batch_size, vocab_size)
-                label_loss = ce_loss(last_token_logits, labels)
+                # Compute KL Divergence loss
+                kd_loss = kl_loss_fn(student_log_probs, teacher_probs) * (T**2)
 
-                # Weighted sum of the two losses
-                loss = soft_target_loss_weight * soft_targets_loss + ce_loss_weight * label_loss
+                # Compute Cross-Entropy loss with hard labels
+                ce_loss = ce_loss_fn(student_logits_flat, labels_flat)
+
+                # Combine both losses and weight with alpha
+                loss = alpha * kd_loss + (1.0 - alpha) * ce_loss
 
                 loss.backward()
                 optimizer.step()
 
                 running_loss += loss.item()
-
                 progress_bar.set_postfix(loss=loss.item())
-                torch.cuda.empty_cache()
-                del input_ids, attention_mask, labels, teacher_logits, student_logits
 
             print(f"Epoch {epoch+1}/{epochs}, Loss: {running_loss / len(train_loader)}")
-        return self.student_model
+        return student, teacher
 
 
 ############Instruction for use################################################

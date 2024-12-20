@@ -13,12 +13,12 @@ class PlotMetrics:
         self.sort_field = "total_model_size_gb"
         self.quant_metrics = [
             "perplexity",
-            "response_length",
+            "token_response_length",
             "repetition_rate",
             "distinct_2",
             "readability",
-            "time_to_first_token",
-            "avg_time_per_token",
+            "time_to_first_token_ms",
+            "avg_time_per_token_ms",
             "tokens_generated_per_response",
         ]
         self.size_metrics = ["num_model_params", "total_model_size_gb"]
@@ -85,7 +85,10 @@ class PlotMetrics:
             hue=self.model_name_field,
             legend=False,
         )
-        plt.title(metric.replace("_", " ").title(), fontsize=16)
+        plt.title(
+            metric.replace("_ms", " (ms)").replace("_gb", " (GB)").replace("_", " ").title(),
+            fontsize=16,
+        )
         plt.ylabel("")
         plt.xlabel(self.model_name_field.replace("_", " ").title(), fontsize=12)
         plt.xticks(rotation=45)
@@ -102,18 +105,25 @@ class PlotMetrics:
             raise ValueError(f"Metric '{metric}' not found in the DataFrame.")
 
         # Plot
-        plt.figure(figsize=(12, 6))
+        plt.figure(figsize=(6, 6))
 
-        sns.barplot(
+        ax = sns.barplot(
             x=self.model_name_field,
             y=metric,
-            hue=self.model_name_field,
             data=self.df_size,
-            palette="muted",
             legend=False,
+            color="#4878d0",
         )
 
-        plt.title(metric.replace("_", " ").title(), fontsize=16)
+        # Add a black border to the bars
+        for bar in ax.patches:
+            bar.set_edgecolor("black")
+            bar.set_linewidth(1.0)
+
+        plt.title(
+            metric.replace("_ms", " (ms)").replace("_gb", " (GB)").replace("_", " ").title(),
+            fontsize=16,
+        )
         plt.ylabel("")
         plt.xlabel(self.model_name_field.replace("_", " ").title(), fontsize=12)
         plt.xticks(rotation=45)

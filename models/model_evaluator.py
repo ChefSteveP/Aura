@@ -10,9 +10,7 @@ from datetime import datetime
 
 
 class ModelEvaluator:
-    def __init__(self, model_name, model, tokenizer, device, dataset, results_dir):
-        self.device = device
-        self.model = model.to(self.device)
+    def __init__(self, model_name, model, tokenizer, dataset, results_dir):
         self.model = model
         self.model_name = model_name
         self.tokenizer = tokenizer
@@ -36,7 +34,6 @@ class ModelEvaluator:
             "text-generation",
             model=self.model,
             tokenizer=self.tokenizer,
-            device=-1 if self.device == "cpu" else 0,  # cuda == 0; cpu == -1
             truncation=True,
         )
 
@@ -75,8 +72,8 @@ class ModelEvaluator:
         )
 
         results = []
-        for i, row in enumerate(self.dataset, start=1):
-            self.log.info(f"Prompt {i}")
+        for i, row in enumerate(self.dataset):
+            self.log.info(f"Prompt {i + 1}")
 
             params = self._get_generator_params(text_inputs=row["prompt"])
             total_time_ms, output = self.compute_total_time_and_generate_output(params)
@@ -101,12 +98,12 @@ class ModelEvaluator:
                     "full_generated_text": generated_text,
                     "model_name": self.model_name,
                     "perplexity": perplexity,
-                    "response_length": length,
+                    "token_response_length": length,
                     "repetition_rate": repetition_rate,
                     "distinct_2": distinct_2,
                     "readability": readability,
-                    "time_to_first_token": ttft,
-                    "avg_time_per_token": avg_time_per_token,
+                    "time_to_first_token_ms": ttft,
+                    "avg_time_per_token_ms": avg_time_per_token,
                     "tokens_generated_per_response": generated_tokens,
                     "num_model_params": num_params,
                     "dtype": dtype,
@@ -117,10 +114,6 @@ class ModelEvaluator:
             )
             torch.cuda.empty_cache()
         return self.save_df(results)
-
-    def clear_cuda_memory(self):
-        self.model.to("cpu")
-        torch.cuda.empty_cache()
 
     def get_formatted_datetime(self):
         """Utilized for functions such as save_df()."""
@@ -190,7 +183,6 @@ class ModelEvaluator:
 
     def compute_perplexity(self, generated_text):
         inputs = self.tokenizer(generated_text, return_tensors="pt", truncation=True)
-        inputs = {key: val.to(self.model.device) for key, val in inputs.items()}
         with torch.no_grad():
             loss = self.model(**inputs, labels=inputs["input_ids"]).loss.item()
         return torch.exp(torch.tensor(loss)).item()

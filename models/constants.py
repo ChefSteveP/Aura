@@ -16,26 +16,17 @@ MODELS_DIR = STORAGE_DIR + "/models"
 LLAMA_1B_MODEL_NAME = "meta-llama/Llama-3.2-1B"
 LLAMA_3B_MODEL_NAME = "meta-llama/Llama-3.2-3B"
 
-# .pt models
-LLAMA_1B_FILE_PATH = MODELS_DIR + "/llama_1B.pt"
-LLAMA_3B_FILE_PATH = MODELS_DIR + "/llama_3B.pt"
-DQ_3B_FILE_PATH = MODELS_DIR + "/llama_3B_dq.pt"
-KD_1B_FILE_PATH_PT = MODELS_DIR + "/llama_1B_kd.pt"
+# KD
+KD_1B_FILE_PATH = MODELS_DIR + "/llama-1B-kd"
+KD_PTQ_1B_FILE_PATH = MODELS_DIR + "/llama-1B-kd-ptq"
 
-# Huggingface model dirs
+# PTQ AWQ
 PTQ_1B_FILE_PATH = MODELS_DIR + "/llama-1B-ptq"
 PTQ_3B_FILE_PATH = MODELS_DIR + "/llama-3B-ptq"
-PTQ_1B_CPU_FILE_PATH = MODELS_DIR + "/llama-1B-ptq-cpu"
-PTQ_3B_CPU_FILE_PATH = MODELS_DIR + "/llama-3B-ptq-cpu"
-
-QAT_3B_FILE_PATH = MODELS_DIR + "/llama-3B-qat"
-KD_1B_FILE_PATH = MODELS_DIR + "/llama-1B-kd"
-PTQ_KD_1B_FILE_PATH = MODELS_DIR + "/llama-1B-ptq-kd"
-PTQ_KD_3B_FILE_PATH = MODELS_DIR + "/llama-3B-ptq-kd"
 
 # Tokenizer file paths
 TOKENIZERS_DIR = STORAGE_DIR + "/tokenizers"
-LLAMA_3B_TOKENIZER_FILE_PATH = TOKENIZERS_DIR + "/llama-3B-tokenizer"
+LLAMA_3B_TOKENIZER = TOKENIZERS_DIR + "/llama-3B-tokenizer"
 
 # Cache directories
 HUB_DIR = STORAGE_DIR + "/hub"
@@ -50,6 +41,7 @@ PROMPTS = [
     "You are a knight who awakens in a forgotten realm where time stands still. How would you write a story about your quest to restore time and escape this eternal limbo?",
     "You're a scientist aboard humanity's first deep-space colony ship. As you travel to a distant star, the ship's AI starts behaving strangely. How would you write a story about uncovering the AI's secrets?"
     "You find an ancient map hidden inside a dusty library book. It leads to a lost city rumored to exist beneath the sands of the Sahara Desert. How would you write a story about your journey to find it?",
+    # "You find an ancient map hidden inside a dusty library book. It leads to a lost city rumored to exist beneath the sands of the Sahara Desert. How would you write a story about your journey to find it?",
     "A powerful mage loses their ability to wield magic overnight. How would you write a story about their search for answers in a world that suddenly feels unfamiliar and dangerous?",
     "You're a journalist in a post-apocalyptic world where plants have overgrown cities and animals have reclaimed the land. How would you write a story about an expedition to document humanity's last refuge?",
     "You inherit a mansion from a long-lost relative, only to discover that each room leads to a different time period. How would you write a story about the adventures you have exploring these eras?",
