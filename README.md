@@ -41,6 +41,29 @@ The following command will evaluate a set of models defined in a dictionary wher
 python models/main.py --evaluate
 ```
 
+# Results
+All plots from the models referenced in the evaluation pipeline are available below:
+
+![avg-time-per-token](plots/avg_time_per_token_ms_violin_plot.png)
+
+![distinct-2](plots/distinct_2_violin_plot.png)
+
+![perplexity](plots/perplexity_violin_plot.png)
+
+![readability](plots/readability_violin_plot.png)
+
+![repetition-rate](plots/repetition_rate_violin_plot.png)
+
+![time-to-first-token](plots/time_to_first_token_ms_violin_plot.png)
+
+![token-response-length](plots/token_response_length_violin_plot.png)
+
+![tokens-generated-per-response](plots/tokens_generated_per_response_violin_plot.png)
+
+![total-model-size](plots/total_model_size_gb_size_plot.png)
+
+![num-model-params-size-plot](plots/num_model_params_size_plot.png)
+
 # Helpful Links
 - [AutoAWQ](https://github.com/casper-hansen/AutoAWQ) - AWQ library for post-training quantization.
 - [Project Gutenberg Dataset](https://huggingface.co/datasets/manu/project_gutenberg/) - A dataset containing 60k English novels in addition to ~10k novels available in other languages.
