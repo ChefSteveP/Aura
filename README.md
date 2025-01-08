@@ -3,6 +3,7 @@ A model evaluation pipeline for Llama models.
 
 In this repo we test the effects of post-training quatization and knowledge distillation on model performance.
 
+Full Technical Report [here](HPML_Report.pdf)
 # Setup
 - Run the setup scripts in `setup_scripts` on a VM. Instructions are posted in `setup_readme.md`.  
 - Request Access to Llama Models [Link](https://www.llama.com/llama-downloads/). Once registered, follow download instructions on Hugging Face.
